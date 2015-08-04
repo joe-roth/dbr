@@ -1,61 +1,68 @@
 package dbr
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"os"
+	"testing"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/gocraft/dbr/ql"
+	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/assert"
 )
 
 //
 // Test helpers
 //
 
-// Returns a session that's not backed by a database
-func createFakeSession() *Session {
-	cxn := NewConnection(nil, nil)
-	return cxn.NewSession(nil)
+var (
+	currID uint64 = 256
+)
+
+// create id
+func nextID() uint64 {
+	currID++
+	return currID
 }
 
-func createRealSession() *Session {
-	cxn := NewConnection(realDb(), nil)
-	return cxn.NewSession(nil)
-}
+const (
+	mysqlDSN    = "root:unprotected@unix(/tmp/mysql.sock)/uservoice_development?charset=utf8&parseTime=true"
+	postgresDSN = "postgres://postgres:unprotected@localhost:5432/uservoice_development?sslmode=disable"
+)
 
-func createRealSessionWithFixtures() *Session {
-	sess := createRealSession()
-	installFixtures(sess.cxn.Db)
+func createSession(driver, dsn string) *Session {
+	var testDSN string
+	switch driver {
+	case "mysql":
+		testDSN = os.Getenv("DBR_TEST_MYSQL_DSN")
+	case "postgres":
+		testDSN = os.Getenv("DBR_TEST_POSTGRES_DSN")
+	}
+	if testDSN != "" {
+		dsn = testDSN
+	}
+	conn, err := Open(driver, dsn, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	reset(conn)
+	sess := conn.NewSession(nil)
 	return sess
 }
 
-func realDb() *sql.DB {
-	driver := os.Getenv("DBR_TEST_DRIVER")
-	if driver == "" {
-		driver = "mysql"
-	}
-
-	dsn := os.Getenv("DBR_TEST_DSN")
-	if dsn == "" {
-		dsn = "root:unprotected@unix(/tmp/mysql.sock)/uservoice_development?charset=utf8&parseTime=true"
-	}
-
-	db, err := sql.Open(driver, dsn)
-	if err != nil {
-		log.Fatalln("Mysql error ", err)
-	}
-
-	return db
-}
+var (
+	mysqlSession    = createSession("mysql", mysqlDSN)
+	postgresSession = createSession("postgres", postgresDSN)
+)
 
 type dbrPerson struct {
-	Id    int64
+	ID    uint64
 	Name  string
-	Email NullString
-	Key   NullString
+	Email string
 }
 
 type nullTypedRecord struct {
-	Id         int64
+	ID         uint64
 	StringVal  NullString
 	Int64Val   NullInt64
 	Float64Val NullFloat64
@@ -63,41 +70,80 @@ type nullTypedRecord struct {
 	BoolVal    NullBool
 }
 
-func installFixtures(db *sql.DB) {
-	createPeopleTable := fmt.Sprintf(`
+func reset(conn *Connection) {
+	// serial = BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE
+	// the following sql should work for both mysql and postgres
+	createPeopleTable := `
 		CREATE TABLE dbr_people (
-			id int(11) DEFAULT NULL auto_increment PRIMARY KEY,
+			id serial PRIMARY KEY,
 			name varchar(255) NOT NULL,
-			email varchar(255),
-			%s varchar(255)
+			email varchar(255)
 		)
-	`, "`key`")
+	`
 
 	createNullTypesTable := `
 		CREATE TABLE null_types (
-			id int(11) DEFAULT NULL auto_increment PRIMARY KEY,
+			id serial PRIMARY KEY,
 			string_val varchar(255) NULL,
-			int64_val int(11) NULL,
+			int64_val integer NULL,
 			float64_val float NULL,
-			time_val datetime NULL,
+			time_val timestamp NULL ,
 			bool_val bool NULL
 		)
 	`
 
-	sqlToRun := []string{
+	for _, v := range []string{
 		"DROP TABLE IF EXISTS dbr_people",
 		createPeopleTable,
-		"INSERT INTO dbr_people (name,email) VALUES ('Jonathan', 'jonathan@uservoice.com')",
-		"INSERT INTO dbr_people (name,email) VALUES ('Dmitri', 'zavorotni@jadius.com')",
 
 		"DROP TABLE IF EXISTS null_types",
 		createNullTypesTable,
-	}
-
-	for _, v := range sqlToRun {
-		_, err := db.Exec(v)
+	} {
+		_, err := conn.Exec(v)
 		if err != nil {
-			log.Fatalln("Failed to execute statement: ", v, " Got error: ", err)
+			log.Fatal("Failed to execute statement: ", v, " Got error: ", err)
 		}
+	}
+}
+
+func TestBasicCRUD(t *testing.T) {
+	jonathan := dbrPerson{
+		ID:    nextID(),
+		Name:  "jonathan",
+		Email: "jonathan@uservoice.com",
+	}
+	for _, sess := range []SessionRunner{mysqlSession, postgresSession} {
+		// insert
+		result, err := sess.InsertInto("dbr_people").Columns("id", "name", "email").Record(jonathan).Exec()
+		assert.NoError(t, err)
+
+		rowsAffected, err := result.RowsAffected()
+		assert.NoError(t, err)
+		assert.EqualValues(t, 1, rowsAffected)
+
+		// select
+		var people []dbrPerson
+		err = sess.Select("*").From("dbr_people").Where(ql.Eq("id", jonathan.ID)).Load(&people)
+		assert.NoError(t, err)
+		assert.Equal(t, len(people), 1)
+		assert.Equal(t, jonathan.ID, people[0].ID)
+		assert.Equal(t, jonathan.Name, people[0].Name)
+		assert.Equal(t, jonathan.Email, people[0].Email)
+
+		// update
+		result, err = sess.Update("dbr_people").Where(ql.Eq("id", jonathan.ID)).Set("name", "jonathan1").Exec()
+		assert.NoError(t, err)
+
+		rowsAffected, err = result.RowsAffected()
+		assert.NoError(t, err)
+		assert.EqualValues(t, 1, rowsAffected)
+
+		// delete
+		result, err = sess.DeleteFrom("dbr_people").Where(ql.Eq("id", jonathan.ID)).Exec()
+		assert.NoError(t, err)
+
+		rowsAffected, err = result.RowsAffected()
+		assert.NoError(t, err)
+		assert.EqualValues(t, 1, rowsAffected)
 	}
 }

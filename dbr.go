@@ -2,51 +2,139 @@ package dbr
 
 import (
 	"database/sql"
+	"fmt"
+	"time"
+
+	"github.com/gocraft/dbr/ql"
+	"github.com/gocraft/dbr/ql/dialect"
 )
+
+// Open instantiates a Connection for a given database/sql connection
+// and event receiver
+func Open(driver, dsn string, log EventReceiver) (*Connection, error) {
+	if log == nil {
+		log = nullReceiver
+	}
+	conn, err := sql.Open(driver, dsn)
+	if err != nil {
+		return nil, err
+	}
+	var d ql.Dialect
+	switch driver {
+	case "mysql":
+		d = dialect.MySQL
+	case "postgres":
+		d = dialect.PostgreSQL
+	default:
+		return nil, ErrNotSupported
+	}
+	return &Connection{DB: conn, EventReceiver: log, Dialect: d}, nil
+}
 
 // Connection is a connection to the database with an EventReceiver
 // to send events, errors, and timings to
 type Connection struct {
-	Db *sql.DB
+	*sql.DB
+	Dialect ql.Dialect
 	EventReceiver
 }
 
 // Session represents a business unit of execution for some connection
 type Session struct {
-	cxn *Connection
+	*Connection
 	EventReceiver
 }
 
-// NewConnection instantiates a Connection for a given database/sql connection
-// and event receiver
-func NewConnection(db *sql.DB, log EventReceiver) *Connection {
-	if log == nil {
-		log = nullReceiver
-	}
-
-	return &Connection{Db: db, EventReceiver: log}
-}
-
 // NewSession instantiates a Session for the Connection
-func (cxn *Connection) NewSession(log EventReceiver) *Session {
+func (conn *Connection) NewSession(log EventReceiver) *Session {
 	if log == nil {
-		log = cxn.EventReceiver // Use parent instrumentation
+		log = conn.EventReceiver // Use parent instrumentation
 	}
-	return &Session{cxn: cxn, EventReceiver: log}
+	return &Session{Connection: conn, EventReceiver: log}
 }
 
 // SessionRunner can do anything that a Session can except start a transaction.
 type SessionRunner interface {
-	Select(cols ...string) *SelectBuilder
-	SelectBySql(sql string, args ...interface{}) *SelectBuilder
+	Select(col ...interface{}) *SelectBuilder
+	SelectBySQL(query string, value ...interface{}) *SelectBuilder
 
-	InsertInto(into string) *InsertBuilder
+	InsertInto(table string) *InsertBuilder
+	InsertBySQL(query string, value ...interface{}) *InsertBuilder
+
 	Update(table string) *UpdateBuilder
-	UpdateBySql(sql string, args ...interface{}) *UpdateBuilder
-	DeleteFrom(from string) *DeleteBuilder
+	UpdateBySQL(query string, value ...interface{}) *UpdateBuilder
+
+	DeleteFrom(table string) *DeleteBuilder
+	DeleteBySQL(query string, value ...interface{}) *DeleteBuilder
 }
 
 type runner interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+}
+
+func exec(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect) (sql.Result, error) {
+	query, value, err := builder.Build(d)
+	if err != nil {
+		return nil, err
+	}
+	query, err = ql.Interpolate(query, value, d)
+	if err != nil {
+		return nil, log.EventErrKv("dbr.exec.interpolate", err, kvs{
+			"sql":  query,
+			"args": fmt.Sprint(value),
+		})
+	}
+
+	startTime := time.Now()
+	defer func() {
+		log.TimingKv("dbr.exec", time.Since(startTime).Nanoseconds(), kvs{
+			"sql": query,
+		})
+	}()
+
+	result, err := runner.Exec(query)
+	if err != nil {
+		return result, log.EventErrKv("dbr.exec.exec", err, kvs{
+			"sql": query,
+		})
+	}
+	return result, nil
+}
+
+func query(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect, v interface{}) error {
+	query, value, err := builder.Build(d)
+	if err != nil {
+		return log.EventErrKv("dbr.query.build", err, kvs{
+			"sql":  query,
+			"args": fmt.Sprint(value),
+		})
+	}
+	query, err = ql.Interpolate(query, value, d)
+	if err != nil {
+		return log.EventErrKv("dbr.query.interpolate", err, kvs{
+			"sql": query,
+		})
+	}
+
+	startTime := time.Now()
+	defer func() {
+		log.TimingKv("dbr.query", time.Since(startTime).Nanoseconds(), kvs{
+			"sql": query,
+		})
+	}()
+
+	rows, err := runner.Query(query)
+	if err != nil {
+		return log.EventErrKv("dbr.query.query", err, kvs{
+			"sql": query,
+		})
+	}
+	err = ql.Load(rows, v)
+	if err != nil {
+		return log.EventErrKv("dbr.query.load", err, kvs{
+			"sql": query,
+		})
+	}
+	return nil
 }

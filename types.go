@@ -3,10 +3,9 @@ package dbr
 import (
 	"bytes"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"time"
-
-	"github.com/go-sql-driver/mysql"
 )
 
 //
@@ -30,7 +29,22 @@ type NullInt64 struct {
 
 // NullTime is a type that can be null or a time
 type NullTime struct {
-	mysql.NullTime
+	Time  time.Time
+	Valid bool // Valid is true if Time is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (n *NullTime) Scan(value interface{}) error {
+	n.Time, n.Valid = value.(time.Time)
+	return nil
+}
+
+// Value implements the driver Valuer interface.
+func (n NullTime) Value() (driver.Value, error) {
+	if !n.Valid {
+		return nil, nil
+	}
+	return n.Time, nil
 }
 
 // NullBool is a type that can be null or a bool
