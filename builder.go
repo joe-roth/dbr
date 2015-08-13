@@ -194,6 +194,19 @@ func (b *InsertBuilder) ToSql() (string, []interface{}) {
 	return s, v
 }
 
+func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
+	b.Column = append(b.Column, column)
+	switch len(b.Value) {
+	case 0:
+		b.InsertBuilder.Values(value)
+	case 1:
+		b.Value[0] = append(b.Value[0], value)
+	default:
+		panic("pair only allows one record to insert")
+	}
+	return b
+}
+
 func (b *InsertBuilder) Exec() (sql.Result, error) {
 	return exec(b.runner, b.EventReceiver, b, b.Dialect)
 }

@@ -138,3 +138,8 @@ func query(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect, v
 	}
 	return count, nil
 }
+
+// Expr
+var (
+	Expr = ql.Expr
+)
