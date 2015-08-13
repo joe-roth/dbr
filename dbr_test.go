@@ -123,9 +123,9 @@ func TestBasicCRUD(t *testing.T) {
 
 		// select
 		var people []dbrPerson
-		err = sess.Select("*").From("dbr_people").Where(ql.Eq("id", jonathan.ID)).Load(&people)
+		count, err := sess.Select("*").From("dbr_people").Where(ql.Eq("id", jonathan.ID)).LoadStructs(&people)
 		assert.NoError(t, err)
-		assert.Equal(t, len(people), 1)
+		assert.Equal(t, count, 1)
 		assert.Equal(t, jonathan.ID, people[0].ID)
 		assert.Equal(t, jonathan.Name, people[0].Name)
 		assert.Equal(t, jonathan.Email, people[0].Email)

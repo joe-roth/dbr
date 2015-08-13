@@ -32,7 +32,7 @@ func (tx *Tx) Select(column ...interface{}) *SelectBuilder {
 	}
 }
 
-func (sess *Session) SelectBySQL(query string, value ...interface{}) *SelectBuilder {
+func (sess *Session) SelectBySql(query string, value ...interface{}) *SelectBuilder {
 	return &SelectBuilder{
 		runner:        sess,
 		EventReceiver: sess,
@@ -41,7 +41,7 @@ func (sess *Session) SelectBySQL(query string, value ...interface{}) *SelectBuil
 	}
 }
 
-func (tx *Tx) SelectBySQL(query string, value ...interface{}) *SelectBuilder {
+func (tx *Tx) SelectBySql(query string, value ...interface{}) *SelectBuilder {
 	return &SelectBuilder{
 		runner:        tx,
 		EventReceiver: tx,
@@ -50,7 +50,37 @@ func (tx *Tx) SelectBySQL(query string, value ...interface{}) *SelectBuilder {
 	}
 }
 
-func (b *SelectBuilder) Load(value interface{}) error {
+func (b *SelectBuilder) ToSql() (string, []interface{}) {
+	s, v, err := b.Build(b.Dialect)
+	panic(err)
+	return s, v
+}
+
+func (b *SelectBuilder) Load(value interface{}) (int, error) {
+	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
+}
+
+func (b *SelectBuilder) LoadStruct(value interface{}) error {
+	_, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *SelectBuilder) LoadStructs(value interface{}) (int, error) {
+	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
+}
+
+func (b *SelectBuilder) LoadValue(value interface{}) error {
+	_, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *SelectBuilder) LoadValues(value interface{}) (int, error) {
 	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
 }
 
@@ -89,8 +119,23 @@ func (b *SelectBuilder) Offset(n uint64) *SelectBuilder {
 	return b
 }
 
-func (b *SelectBuilder) OrderBy(col string, dir ql.Direction) *SelectBuilder {
-	b.SelectBuilder.OrderBy(col, dir)
+func (b *SelectBuilder) OrderDir(col string, isAsc bool) *SelectBuilder {
+	if isAsc {
+		b.SelectBuilder.OrderBy(col, ql.ASC)
+	} else {
+		b.SelectBuilder.OrderBy(col, ql.DESC)
+	}
+	return b
+}
+
+func (b *SelectBuilder) Paginate(page, perPage uint64) *SelectBuilder {
+	b.Limit(perPage)
+	b.Offset((page - 1) * perPage)
+	return b
+}
+
+func (b *SelectBuilder) OrderBy(col string) *SelectBuilder {
+	b.SelectBuilder.OrderBy(col, ql.ASC)
 	return b
 }
 
@@ -125,7 +170,7 @@ func (tx *Tx) InsertInto(table string) *InsertBuilder {
 	}
 }
 
-func (sess *Session) InsertBySQL(query string, value ...interface{}) *InsertBuilder {
+func (sess *Session) InsertBySql(query string, value ...interface{}) *InsertBuilder {
 	return &InsertBuilder{
 		runner:        sess,
 		EventReceiver: sess,
@@ -134,7 +179,7 @@ func (sess *Session) InsertBySQL(query string, value ...interface{}) *InsertBuil
 	}
 }
 
-func (tx *Tx) InsertBySQL(query string, value ...interface{}) *InsertBuilder {
+func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilder {
 	return &InsertBuilder{
 		runner:        tx,
 		EventReceiver: tx,
@@ -142,6 +187,13 @@ func (tx *Tx) InsertBySQL(query string, value ...interface{}) *InsertBuilder {
 		InsertBuilder: ql.InsertBySQL(query, value...),
 	}
 }
+
+func (b *InsertBuilder) ToSql() (string, []interface{}) {
+	s, v, err := b.Build(b.Dialect)
+	panic(err)
+	return s, v
+}
+
 func (b *InsertBuilder) Exec() (sql.Result, error) {
 	return exec(b.runner, b.EventReceiver, b, b.Dialect)
 }
@@ -187,7 +239,7 @@ func (tx *Tx) Update(table string) *UpdateBuilder {
 	}
 }
 
-func (sess *Session) UpdateBySQL(query string, value ...interface{}) *UpdateBuilder {
+func (sess *Session) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
 	return &UpdateBuilder{
 		runner:        sess,
 		EventReceiver: sess,
@@ -196,13 +248,19 @@ func (sess *Session) UpdateBySQL(query string, value ...interface{}) *UpdateBuil
 	}
 }
 
-func (tx *Tx) UpdateBySQL(query string, value ...interface{}) *UpdateBuilder {
+func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
 	return &UpdateBuilder{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
 		UpdateBuilder: ql.UpdateBySQL(query, value...),
 	}
+}
+
+func (b *UpdateBuilder) ToSql() (string, []interface{}) {
+	s, v, err := b.Build(b.Dialect)
+	panic(err)
+	return s, v
 }
 
 func (b *UpdateBuilder) Exec() (sql.Result, error) {
@@ -250,7 +308,7 @@ func (tx *Tx) DeleteFrom(table string) *DeleteBuilder {
 	}
 }
 
-func (sess *Session) DeleteBySQL(query string, value ...interface{}) *DeleteBuilder {
+func (sess *Session) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
 	return &DeleteBuilder{
 		runner:        sess,
 		EventReceiver: sess,
@@ -259,13 +317,19 @@ func (sess *Session) DeleteBySQL(query string, value ...interface{}) *DeleteBuil
 	}
 }
 
-func (tx *Tx) DeleteBySQL(query string, value ...interface{}) *DeleteBuilder {
+func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
 	return &DeleteBuilder{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
 		DeleteBuilder: ql.DeleteBySQL(query, value...),
 	}
+}
+
+func (b *DeleteBuilder) ToSql() (string, []interface{}) {
+	s, v, err := b.Build(b.Dialect)
+	panic(err)
+	return s, v
 }
 
 func (b *DeleteBuilder) Exec() (sql.Result, error) {

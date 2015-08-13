@@ -56,16 +56,16 @@ func (conn *Connection) NewSession(log EventReceiver) *Session {
 // SessionRunner can do anything that a Session can except start a transaction.
 type SessionRunner interface {
 	Select(col ...interface{}) *SelectBuilder
-	SelectBySQL(query string, value ...interface{}) *SelectBuilder
+	SelectBySql(query string, value ...interface{}) *SelectBuilder
 
 	InsertInto(table string) *InsertBuilder
-	InsertBySQL(query string, value ...interface{}) *InsertBuilder
+	InsertBySql(query string, value ...interface{}) *InsertBuilder
 
 	Update(table string) *UpdateBuilder
-	UpdateBySQL(query string, value ...interface{}) *UpdateBuilder
+	UpdateBySql(query string, value ...interface{}) *UpdateBuilder
 
 	DeleteFrom(table string) *DeleteBuilder
-	DeleteBySQL(query string, value ...interface{}) *DeleteBuilder
+	DeleteBySql(query string, value ...interface{}) *DeleteBuilder
 }
 
 type runner interface {
@@ -102,39 +102,39 @@ func exec(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect) (s
 	return result, nil
 }
 
-func query(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect, v interface{}) error {
+func query(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect, v interface{}) (int, error) {
 	query, value, err := builder.Build(d)
 	if err != nil {
-		return log.EventErrKv("dbr.query.build", err, kvs{
+		return 0, log.EventErrKv("dbr.select.build", err, kvs{
 			"sql":  query,
 			"args": fmt.Sprint(value),
 		})
 	}
 	query, err = ql.Interpolate(query, value, d)
 	if err != nil {
-		return log.EventErrKv("dbr.query.interpolate", err, kvs{
+		return 0, log.EventErrKv("dbr.select.interpolate", err, kvs{
 			"sql": query,
 		})
 	}
 
 	startTime := time.Now()
 	defer func() {
-		log.TimingKv("dbr.query", time.Since(startTime).Nanoseconds(), kvs{
+		log.TimingKv("dbr.select", time.Since(startTime).Nanoseconds(), kvs{
 			"sql": query,
 		})
 	}()
 
 	rows, err := runner.Query(query)
 	if err != nil {
-		return log.EventErrKv("dbr.query.query", err, kvs{
+		return 0, log.EventErrKv("dbr.select.load.query", err, kvs{
 			"sql": query,
 		})
 	}
-	err = ql.Load(rows, v)
+	count, err := ql.Load(rows, v)
 	if err != nil {
-		return log.EventErrKv("dbr.query.load", err, kvs{
+		return 0, log.EventErrKv("dbr.select.load.scan", ErrNotFound, kvs{
 			"sql": query,
 		})
 	}
-	return nil
+	return count, nil
 }

@@ -6,20 +6,21 @@ import (
 )
 
 // Load loads any value from sql.Rows
-func Load(rows *sql.Rows, value interface{}) error {
+func Load(rows *sql.Rows, value interface{}) (int, error) {
 	defer rows.Close()
 
 	column, err := rows.Columns()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	v := reflect.ValueOf(value)
 	if v.Kind() != reflect.Ptr {
-		return ErrBadArgument
+		return 0, ErrBadArgument
 	}
 	v = v.Elem()
 	isSlice := v.Kind() == reflect.Slice && v.Type().Elem().Kind() != reflect.Uint8
+	count := 0
 	for rows.Next() {
 		elem := v
 		if isSlice {
@@ -27,16 +28,17 @@ func Load(rows *sql.Rows, value interface{}) error {
 		}
 		ptr, err := findPtr(column, elem)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		rows.Scan(ptr...)
+		count++
 		if isSlice {
 			v.Set(reflect.Append(v, elem))
 		} else {
 			break
 		}
 	}
-	return nil
+	return count, nil
 }
 
 func findPtr(column []string, value reflect.Value) ([]interface{}, error) {

@@ -35,7 +35,7 @@ func TestNullTypesScanning(t *testing.T) {
 			assert.NoError(t, err)
 
 			var record nullTypedRecord
-			err = sess.Select("*").From("null_types").Where(ql.Eq("id", test.in.ID)).Load(&record)
+			err = sess.Select("*").From("null_types").Where(ql.Eq("id", test.in.ID)).LoadStruct(&record)
 			assert.NoError(t, err)
 			// TODO: https://github.com/lib/pq/issues/329
 			record.TimeVal.Time = test.in.TimeVal.Time

@@ -13,7 +13,7 @@ sess := conn.NewSession(nil)
 
 // get a record
 var suggestion Suggestion
-sess.Select("id", "title").From("suggestions").Where("id = ?", 1).Load(&suggestion)
+sess.Select("id", "title").From("suggestions").Where("id = ?", 1).LoadStruct(&suggestion)
 
 // JSON-ready, with dbr.Null* types serialized like you want
 b, _ := json.Marshal(&suggestion)
@@ -27,14 +27,14 @@ Querying is the heart of gocraft/dbr. Automatically map results to structs:
 
 ```go
 var suggestion Suggestion
-sess.Select("id", "title", "body").From("suggestions").Where("id = ?", 1).Load(&suggestion)
+sess.Select("id", "title", "body").From("suggestions").Where("id = ?", 1).LoadStruct(&suggestion)
 ```
 
 Additionally, easily query a single value or a slice of values:
 
 ```go
 var suggestions []Suggestion
-sess.Select("id", "title", "body").From("suggestions").OrderBy("id", ql.ASC).Load(&suggestions)
+sess.Select("id", "title", "body").From("suggestions").OrderBy("id", ql.ASC).LoadStruct(&suggestions)
 ```
 
 
