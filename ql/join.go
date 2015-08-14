@@ -17,6 +17,14 @@ type join struct {
 	On    []Condition
 }
 
+func Join(t JoinType, table interface{}, on ...Condition) Builder {
+	return &join{
+		Table: table,
+		Type:  t,
+		On:    on,
+	}
+}
+
 func (join *join) Build(d Dialect) (string, []interface{}, error) {
 	buf := new(bytes.Buffer)
 	var value []interface{}

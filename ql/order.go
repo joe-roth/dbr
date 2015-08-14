@@ -16,6 +16,13 @@ type order struct {
 	Direction Direction
 }
 
+func Order(column string, dir Direction) Builder {
+	return &order{
+		Column:    column,
+		Direction: dir,
+	}
+}
+
 func (order *order) Build(d Dialect) (string, []interface{}, error) {
 	buf := new(bytes.Buffer)
 	buf.WriteString(d.QuoteIdent(order.Column))

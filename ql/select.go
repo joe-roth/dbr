@@ -201,10 +201,7 @@ func (b *SelectBuilder) GroupBy(col ...string) *SelectBuilder {
 
 // OrderBy specifies columns for ordering
 func (b *SelectBuilder) OrderBy(col string, dir Direction) *SelectBuilder {
-	b.Order = append(b.Order, &order{
-		Column:    col,
-		Direction: dir,
-	})
+	b.Order = append(b.Order, Order(col, dir))
 	return b
 }
 
@@ -222,10 +219,6 @@ func (b *SelectBuilder) Offset(n uint64) *SelectBuilder {
 
 // Join joins table on condition
 func (b *SelectBuilder) Join(t JoinType, table interface{}, cond ...Condition) *SelectBuilder {
-	b.JoinTable = append(b.JoinTable, &join{
-		Table: table,
-		Type:  t,
-		On:    cond,
-	})
+	b.JoinTable = append(b.JoinTable, Join(t, table, cond...))
 	return b
 }

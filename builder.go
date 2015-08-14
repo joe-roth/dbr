@@ -135,7 +135,7 @@ func (b *SelectBuilder) Paginate(page, perPage uint64) *SelectBuilder {
 }
 
 func (b *SelectBuilder) OrderBy(col string) *SelectBuilder {
-	b.SelectBuilder.OrderBy(col, ql.ASC)
+	b.SelectBuilder.Order = append(b.SelectBuilder.Order, ql.Expr(col))
 	return b
 }
 

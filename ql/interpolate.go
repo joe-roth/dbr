@@ -106,7 +106,7 @@ func interpolateWithDialect(value interface{}, d Dialect) (string, error) {
 		return fmt.Sprint(v.Interface()), nil
 	case reflect.Struct:
 		if v.Type() == reflect.TypeOf(time.Time{}) {
-			return d.EncodeTime(v.Interface().(time.Time)), nil
+			return d.EncodeTime(v.Interface().(time.Time).UTC()), nil
 		}
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
@@ -114,18 +114,23 @@ func interpolateWithDialect(value interface{}, d Dialect) (string, error) {
 			return d.EncodeBytes(v.Bytes()), nil
 		}
 		buf := new(bytes.Buffer)
-		buf.WriteRune('(')
-		for i := 0; i < v.Len(); i++ {
-			if i > 0 {
-				buf.WriteRune(',')
+		if v.Len() == 0 {
+			// This will never match, since nothing is equal to null (not even null itself.)
+			buf.WriteString("(NULL)")
+		} else {
+			buf.WriteRune('(')
+			for i := 0; i < v.Len(); i++ {
+				if i > 0 {
+					buf.WriteRune(',')
+				}
+				s, err := interpolateWithDialect(v.Index(i).Interface(), d)
+				if err != nil {
+					return "", err
+				}
+				buf.WriteString(s)
 			}
-			s, err := interpolateWithDialect(v.Index(i).Interface(), d)
-			if err != nil {
-				return "", err
-			}
-			buf.WriteString(s)
+			buf.WriteRune(')')
 		}
-		buf.WriteRune(')')
 		return buf.String(), nil
 	case reflect.Ptr:
 		return interpolateWithDialect(v.Elem().Interface(), d)

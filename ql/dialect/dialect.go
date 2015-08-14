@@ -1,7 +1,5 @@
 package dialect
 
-import "strings"
-
 var (
 	// MySQL dialect
 	MySQL = mysql{}
@@ -14,5 +12,15 @@ const (
 )
 
 func isSQLFunc(s string) bool {
-	return strings.ContainsAny(s, "()* ")
+	for _, c := range s {
+		switch {
+		case c == '.':
+		case 'a' <= c && c <= 'z':
+		case 'A' <= c && c <= 'Z':
+		case '0' <= c && c <= '9':
+		default:
+			return true
+		}
+	}
+	return false
 }
