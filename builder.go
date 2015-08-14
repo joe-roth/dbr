@@ -232,6 +232,8 @@ type UpdateBuilder struct {
 	Dialect ql.Dialect
 
 	*ql.UpdateBuilder
+
+	LimitCount int64
 }
 
 func (sess *Session) Update(table string) *UpdateBuilder {
@@ -240,6 +242,7 @@ func (sess *Session) Update(table string) *UpdateBuilder {
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
 		UpdateBuilder: ql.Update(table),
+		LimitCount:    -1,
 	}
 }
 
@@ -249,6 +252,7 @@ func (tx *Tx) Update(table string) *UpdateBuilder {
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
 		UpdateBuilder: ql.Update(table),
+		LimitCount:    -1,
 	}
 }
 
@@ -258,6 +262,7 @@ func (sess *Session) UpdateBySql(query string, value ...interface{}) *UpdateBuil
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
 		UpdateBuilder: ql.UpdateBySQL(query, value...),
+		LimitCount:    -1,
 	}
 }
 
@@ -267,6 +272,7 @@ func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
 		UpdateBuilder: ql.UpdateBySQL(query, value...),
+		LimitCount:    -1,
 	}
 }
 
@@ -295,12 +301,31 @@ func (b *UpdateBuilder) Where(query interface{}, value ...interface{}) *UpdateBu
 	return b
 }
 
+func (b *UpdateBuilder) Limit(n uint64) *UpdateBuilder {
+	b.LimitCount = int64(n)
+	return b
+}
+
+func (b *UpdateBuilder) Build(d ql.Dialect) (string, []interface{}, error) {
+	s, v, err := b.UpdateBuilder.Build(d)
+	if err != nil {
+		return "", nil, err
+	}
+	if b.LimitCount >= 0 {
+		s += " LIMIT ?"
+		v = append(v, b.LimitCount)
+	}
+	return s, v, nil
+}
+
 type DeleteBuilder struct {
 	runner
 	EventReceiver
 	Dialect ql.Dialect
 
 	*ql.DeleteBuilder
+
+	LimitCount int64
 }
 
 func (sess *Session) DeleteFrom(table string) *DeleteBuilder {
@@ -309,6 +334,7 @@ func (sess *Session) DeleteFrom(table string) *DeleteBuilder {
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
 		DeleteBuilder: ql.DeleteFrom(table),
+		LimitCount:    -1,
 	}
 }
 
@@ -318,6 +344,7 @@ func (tx *Tx) DeleteFrom(table string) *DeleteBuilder {
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
 		DeleteBuilder: ql.DeleteFrom(table),
+		LimitCount:    -1,
 	}
 }
 
@@ -327,6 +354,7 @@ func (sess *Session) DeleteBySql(query string, value ...interface{}) *DeleteBuil
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
 		DeleteBuilder: ql.DeleteBySQL(query, value...),
+		LimitCount:    -1,
 	}
 }
 
@@ -336,6 +364,7 @@ func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
 		DeleteBuilder: ql.DeleteBySQL(query, value...),
+		LimitCount:    -1,
 	}
 }
 
@@ -352,4 +381,21 @@ func (b *DeleteBuilder) Exec() (sql.Result, error) {
 func (b *DeleteBuilder) Where(query interface{}, value ...interface{}) *DeleteBuilder {
 	b.DeleteBuilder.Where(query, value...)
 	return b
+}
+
+func (b *DeleteBuilder) Limit(n uint64) *DeleteBuilder {
+	b.LimitCount = int64(n)
+	return b
+}
+
+func (b *DeleteBuilder) Build(d ql.Dialect) (string, []interface{}, error) {
+	s, v, err := b.DeleteBuilder.Build(d)
+	if err != nil {
+		return "", nil, err
+	}
+	if b.LimitCount >= 0 {
+		s += " LIMIT ?"
+		v = append(v, b.LimitCount)
+	}
+	return s, v, nil
 }
