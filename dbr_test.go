@@ -26,8 +26,8 @@ func nextID() uint64 {
 }
 
 const (
-	mysqlDSN    = "root:unprotected@unix(/tmp/mysql.sock)/uservoice_development?charset=utf8&parseTime=true"
-	postgresDSN = "postgres://postgres:unprotected@localhost:5432/uservoice_development?sslmode=disable"
+	mysqlDSN    = "root@unix(/tmp/mysql.sock)/uservoice_development?charset=utf8&parseTime=true"
+	postgresDSN = "postgres://postgres@localhost:5432/uservoice_development?sslmode=disable"
 )
 
 func createSession(driver, dsn string) *Session {
