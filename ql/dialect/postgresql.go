@@ -35,7 +35,7 @@ func (d postgreSQL) EncodeTime(t time.Time) string {
 }
 
 func (d postgreSQL) EncodeBytes(b []byte) string {
-	return d.EncodeString(`\x` + fmt.Sprintf("%x", b))
+	return d.EncodeString(fmt.Sprintf(`\x%x`, b))
 }
 
 func (d postgreSQL) Placeholder() string {
