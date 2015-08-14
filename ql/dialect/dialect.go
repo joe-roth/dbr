@@ -15,6 +15,7 @@ func isSQLFunc(s string) bool {
 	for _, c := range s {
 		switch {
 		case c == '.':
+		case c == '_':
 		case 'a' <= c && c <= 'z':
 		case 'A' <= c && c <= 'Z':
 		case '0' <= c && c <= '9':
