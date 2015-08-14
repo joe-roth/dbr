@@ -115,6 +115,7 @@ func interpolateWithDialect(value interface{}, d Dialect) (string, error) {
 		}
 		buf := new(bytes.Buffer)
 		if v.Len() == 0 {
+			return "", ErrNotSupported
 			// This will never match, since nothing is equal to null (not even null itself.)
 			buf.WriteString("(NULL)")
 		} else {

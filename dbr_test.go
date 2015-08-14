@@ -16,11 +16,11 @@ import (
 //
 
 var (
-	currID uint64 = 256
+	currID int64 = 256
 )
 
 // create id
-func nextID() uint64 {
+func nextID() int64 {
 	currID++
 	return currID
 }
@@ -56,13 +56,13 @@ var (
 )
 
 type dbrPerson struct {
-	ID    uint64
+	Id    int64
 	Name  string
 	Email string
 }
 
 type nullTypedRecord struct {
-	ID         uint64
+	Id         int64
 	StringVal  NullString
 	Int64Val   NullInt64
 	Float64Val NullFloat64
@@ -108,42 +108,68 @@ func reset(conn *Connection) {
 
 func TestBasicCRUD(t *testing.T) {
 	jonathan := dbrPerson{
-		ID:    nextID(),
 		Name:  "jonathan",
 		Email: "jonathan@uservoice.com",
 	}
-	for _, sess := range []SessionRunner{mysqlSession, postgresSession} {
+	dmitri := dbrPerson{
+		Name:  "dmitri",
+		Email: "zavorotni@jadius.com",
+	}
+	for _, sess := range []*Session{mysqlSession, postgresSession} {
+		if sess == postgresSession {
+			jonathan.Id = nextID()
+		}
 		// insert
-		result, err := sess.InsertInto("dbr_people").Columns("id", "name", "email").Record(jonathan).Exec()
+		result, err := sess.InsertInto("dbr_people").Columns("id", "name", "email").Record(&jonathan).Record(dmitri).Exec()
 		assert.NoError(t, err)
 
 		rowsAffected, err := result.RowsAffected()
 		assert.NoError(t, err)
-		assert.EqualValues(t, 1, rowsAffected)
+		assert.EqualValues(t, 2, rowsAffected)
 
+		assert.True(t, jonathan.Id > 0)
 		// select
 		var people []dbrPerson
-		count, err := sess.Select("*").From("dbr_people").Where(ql.Eq("id", jonathan.ID)).LoadStructs(&people)
+		count, err := sess.Select("*").From("dbr_people").Where(ql.Eq("id", jonathan.Id)).LoadStructs(&people)
 		assert.NoError(t, err)
-		assert.Equal(t, count, 1)
-		assert.Equal(t, jonathan.ID, people[0].ID)
+		assert.Equal(t, 1, count)
+		assert.Equal(t, jonathan.Id, people[0].Id)
 		assert.Equal(t, jonathan.Name, people[0].Name)
 		assert.Equal(t, jonathan.Email, people[0].Email)
 
+		// select id
+		ids, err := sess.Select("id").From("dbr_people").ReturnInt64s()
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(ids))
+
+		// select id limit
+		ids, err = sess.Select("id").From("dbr_people").Limit(1).ReturnInt64s()
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(ids))
+
 		// update
-		result, err = sess.Update("dbr_people").Where(ql.Eq("id", jonathan.ID)).Set("name", "jonathan1").Exec()
+		result, err = sess.Update("dbr_people").Where(ql.Eq("id", jonathan.Id)).Set("name", "jonathan1").Exec()
 		assert.NoError(t, err)
 
 		rowsAffected, err = result.RowsAffected()
 		assert.NoError(t, err)
 		assert.EqualValues(t, 1, rowsAffected)
+
+		var n uint64
+		sess.Select("count(*)").From("dbr_people").Where("name = ?", "jonathan1").LoadValue(&n)
+		assert.EqualValues(t, 1, n)
 
 		// delete
-		result, err = sess.DeleteFrom("dbr_people").Where(ql.Eq("id", jonathan.ID)).Exec()
+		result, err = sess.DeleteFrom("dbr_people").Where(ql.Eq("id", jonathan.Id)).Exec()
 		assert.NoError(t, err)
 
 		rowsAffected, err = result.RowsAffected()
 		assert.NoError(t, err)
 		assert.EqualValues(t, 1, rowsAffected)
+
+		// select id
+		ids, err = sess.Select("id").From("dbr_people").ReturnInt64s()
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(ids))
 	}
 }

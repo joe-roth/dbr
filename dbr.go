@@ -132,7 +132,7 @@ func query(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect, v
 	}
 	count, err := ql.Load(rows, v)
 	if err != nil {
-		return 0, log.EventErrKv("dbr.select.load.scan", ErrNotFound, kvs{
+		return 0, log.EventErrKv("dbr.select.load.scan", err, kvs{
 			"sql": query,
 		})
 	}

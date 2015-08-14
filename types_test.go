@@ -30,12 +30,12 @@ func TestNullTypesScanning(t *testing.T) {
 		},
 	} {
 		for _, sess := range []SessionRunner{mysqlSession, postgresSession} {
-			test.in.ID = nextID()
+			test.in.Id = nextID()
 			_, err := sess.InsertInto("null_types").Columns("id", "string_val", "int64_val", "float64_val", "time_val", "bool_val").Record(test.in).Exec()
 			assert.NoError(t, err)
 
 			var record nullTypedRecord
-			err = sess.Select("*").From("null_types").Where(ql.Eq("id", test.in.ID)).LoadStruct(&record)
+			err = sess.Select("*").From("null_types").Where(ql.Eq("id", test.in.Id)).LoadStruct(&record)
 			assert.NoError(t, err)
 			// TODO: https://github.com/lib/pq/issues/329
 			record.TimeVal.Time = test.in.TimeVal.Time
@@ -50,11 +50,11 @@ func TestNullTypesJSON(t *testing.T) {
 		want []byte
 	}{
 		{
-			want: []byte(`{"ID":0,"StringVal":null,"Int64Val":null,"Float64Val":null,"TimeVal":null,"BoolVal":null}`),
+			want: []byte(`{"Id":0,"StringVal":null,"Int64Val":null,"Float64Val":null,"TimeVal":null,"BoolVal":null}`),
 		},
 		{
 			in:   filledRecord,
-			want: []byte(`{"ID":0,"StringVal":"wow","Int64Val":42,"Float64Val":1.618,"TimeVal":"2009-01-03T18:15:05Z","BoolVal":true}`),
+			want: []byte(`{"Id":0,"StringVal":"wow","Int64Val":42,"Float64Val":1.618,"TimeVal":"2009-01-03T18:15:05Z","BoolVal":true}`),
 		},
 	} {
 		b, err := json.Marshal(&test.in)

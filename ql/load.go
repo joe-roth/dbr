@@ -22,15 +22,20 @@ func Load(rows *sql.Rows, value interface{}) (int, error) {
 	isSlice := v.Kind() == reflect.Slice && v.Type().Elem().Kind() != reflect.Uint8
 	count := 0
 	for rows.Next() {
-		elem := v
+		var elem reflect.Value
 		if isSlice {
 			elem = reflect.New(v.Type().Elem()).Elem()
+		} else {
+			elem = v
 		}
 		ptr, err := findPtr(column, elem)
 		if err != nil {
 			return 0, err
 		}
-		rows.Scan(ptr...)
+		err = rows.Scan(ptr...)
+		if err != nil {
+			return 0, err
+		}
 		count++
 		if isSlice {
 			v.Set(reflect.Append(v, elem))
@@ -41,7 +46,12 @@ func Load(rows *sql.Rows, value interface{}) (int, error) {
 	return count, nil
 }
 
+var dummyDest interface{}
+
 func findPtr(column []string, value reflect.Value) ([]interface{}, error) {
+	if _, ok := value.Addr().Interface().(sql.Scanner); ok {
+		return []interface{}{value.Addr().Interface()}, nil
+	}
 	switch value.Kind() {
 	case reflect.Struct:
 		var ptr []interface{}
@@ -50,7 +60,7 @@ func findPtr(column []string, value reflect.Value) ([]interface{}, error) {
 			if val, ok := m[key]; ok {
 				ptr = append(ptr, val.Addr().Interface())
 			} else {
-				ptr = append(ptr, nil)
+				ptr = append(ptr, &dummyDest)
 			}
 		}
 		return ptr, nil

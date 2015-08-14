@@ -12,7 +12,6 @@ type Condition interface {
 
 func buildCond(d Dialect, pred string, cond ...Condition) (string, []interface{}, error) {
 	buf := new(bytes.Buffer)
-	buf.WriteRune('(')
 	var value []interface{}
 	for i, c := range cond {
 		if i > 0 {
@@ -24,10 +23,11 @@ func buildCond(d Dialect, pred string, cond ...Condition) (string, []interface{}
 		if err != nil {
 			return "", nil, err
 		}
+		buf.WriteRune('(')
 		buf.WriteString(query)
+		buf.WriteRune(')')
 		value = append(value, v...)
 	}
-	buf.WriteRune(')')
 	return buf.String(), value, nil
 }
 

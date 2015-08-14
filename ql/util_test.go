@@ -83,7 +83,7 @@ func TestStructMap(t *testing.T) {
 					Test2 int
 				}
 			}{},
-			ok: []string{"test1_test2"},
+			ok: []string{"test2"},
 		},
 	} {
 		m := structMap(reflect.ValueOf(test.in))

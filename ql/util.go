@@ -23,14 +23,14 @@ func camelCaseToSnakeCase(name string) string {
 
 func structMap(value reflect.Value) map[string]reflect.Value {
 	m := make(map[string]reflect.Value)
-	structValue(m, "", value)
+	structValue(m, value)
 	return m
 }
 
-func structValue(m map[string]reflect.Value, key string, value reflect.Value) {
+func structValue(m map[string]reflect.Value, value reflect.Value) {
 	switch value.Kind() {
 	case reflect.Ptr:
-		structValue(m, key, value.Elem())
+		structValue(m, value.Elem())
 	case reflect.Struct:
 		t := value.Type()
 		for i := 0; i < t.NumField(); i++ {
@@ -44,17 +44,14 @@ func structValue(m map[string]reflect.Value, key string, value reflect.Value) {
 				// ignore
 				continue
 			}
-			if _, ok := m[tag]; tag == "" && !ok {
+			if tag == "" {
 				// no tag, but we can record the field name
 				tag = camelCaseToSnakeCase(field.Name)
-				if key != "" {
-					tag = key + "_" + tag
-				}
 			}
-			m[tag] = value.Field(i)
-			structValue(m, tag, value.Field(i))
+			if _, ok := m[tag]; !ok {
+				m[tag] = value.Field(i)
+			}
+			structValue(m, value.Field(i))
 		}
-	default:
-		m[key] = value
 	}
 }

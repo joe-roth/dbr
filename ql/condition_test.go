@@ -60,7 +60,7 @@ func TestCondition(t *testing.T) {
 		},
 		{
 			cond:  And(Lt("a", 1), Or(Gt("b", 2), Neq("c", 3))),
-			query: "(`a` < ? AND (`b` > ? OR `c` != ?))",
+			query: "(`a` < ?) AND ((`b` > ?) OR (`c` != ?))",
 			value: []interface{}{1, 2, 3},
 		},
 	} {

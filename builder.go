@@ -2,6 +2,7 @@ package dbr
 
 import (
 	"database/sql"
+	"reflect"
 
 	"github.com/gocraft/dbr/ql"
 )
@@ -52,7 +53,9 @@ func (tx *Tx) SelectBySql(query string, value ...interface{}) *SelectBuilder {
 
 func (b *SelectBuilder) ToSql() (string, []interface{}) {
 	s, v, err := b.Build(b.Dialect)
-	panic(err)
+	if err != nil {
+		panic(err)
+	}
 	return s, v
 }
 
@@ -61,9 +64,12 @@ func (b *SelectBuilder) Load(value interface{}) (int, error) {
 }
 
 func (b *SelectBuilder) LoadStruct(value interface{}) error {
-	_, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
+	}
+	if count == 0 {
+		return ErrNotFound
 	}
 	return nil
 }
@@ -73,9 +79,12 @@ func (b *SelectBuilder) LoadStructs(value interface{}) (int, error) {
 }
 
 func (b *SelectBuilder) LoadValue(value interface{}) error {
-	_, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
+	}
+	if count == 0 {
+		return ErrNotFound
 	}
 	return nil
 }
@@ -149,6 +158,8 @@ type InsertBuilder struct {
 	EventReceiver
 	Dialect ql.Dialect
 
+	RecordID reflect.Value
+
 	*ql.InsertBuilder
 }
 
@@ -190,7 +201,9 @@ func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilder {
 
 func (b *InsertBuilder) ToSql() (string, []interface{}) {
 	s, v, err := b.Build(b.Dialect)
-	panic(err)
+	if err != nil {
+		panic(err)
+	}
 	return s, v
 }
 
@@ -208,7 +221,18 @@ func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
 }
 
 func (b *InsertBuilder) Exec() (sql.Result, error) {
-	return exec(b.runner, b.EventReceiver, b, b.Dialect)
+	result, err := exec(b.runner, b.EventReceiver, b, b.Dialect)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.RecordID.IsValid() {
+		if id, err := result.LastInsertId(); err == nil {
+			b.RecordID.SetInt(id)
+		}
+	}
+
+	return result, nil
 }
 
 func (b *InsertBuilder) Columns(column ...string) *InsertBuilder {
@@ -217,6 +241,14 @@ func (b *InsertBuilder) Columns(column ...string) *InsertBuilder {
 }
 
 func (b *InsertBuilder) Record(structValue interface{}) *InsertBuilder {
+	v := reflect.Indirect(reflect.ValueOf(structValue))
+	if v.Kind() == reflect.Struct && v.CanSet() {
+		field := v.FieldByName("Id")
+		if field.IsValid() && field.Kind() == reflect.Int64 {
+			b.RecordID = field
+		}
+	}
+
 	b.InsertBuilder.Record(structValue)
 	return b
 }
@@ -278,7 +310,9 @@ func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
 
 func (b *UpdateBuilder) ToSql() (string, []interface{}) {
 	s, v, err := b.Build(b.Dialect)
-	panic(err)
+	if err != nil {
+		panic(err)
+	}
 	return s, v
 }
 
@@ -370,7 +404,9 @@ func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
 
 func (b *DeleteBuilder) ToSql() (string, []interface{}) {
 	s, v, err := b.Build(b.Dialect)
-	panic(err)
+	if err != nil {
+		panic(err)
+	}
 	return s, v
 }
 

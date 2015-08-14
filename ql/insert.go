@@ -96,8 +96,7 @@ func (b *InsertBuilder) Values(value ...interface{}) *InsertBuilder {
 
 // Record adds a tuple for columns from a struct
 func (b *InsertBuilder) Record(structValue interface{}) *InsertBuilder {
-	v := reflect.ValueOf(structValue)
-	v = reflect.Indirect(v)
+	v := reflect.Indirect(reflect.ValueOf(structValue))
 
 	if v.Kind() == reflect.Struct {
 		var value []interface{}
