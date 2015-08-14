@@ -2,7 +2,6 @@ package ql
 
 import (
 	"bytes"
-	"database/sql"
 	"reflect"
 	"unicode"
 )
@@ -52,11 +51,8 @@ func structValue(m map[string]reflect.Value, key string, value reflect.Value) {
 					tag = key + "_" + tag
 				}
 			}
-			if reflect.PtrTo(field.Type).Implements(reflect.TypeOf((*sql.Scanner)(nil)).Elem()) {
-				m[tag] = value.Field(i)
-			} else {
-				structValue(m, tag, value.Field(i))
-			}
+			m[tag] = value.Field(i)
+			structValue(m, tag, value.Field(i))
 		}
 	default:
 		m[key] = value
