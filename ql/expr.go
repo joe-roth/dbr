@@ -11,6 +11,8 @@ func Expr(query string, value ...interface{}) Builder {
 	return &raw{Query: query, Value: value}
 }
 
-func (raw *raw) Build(_ Dialect) (string, []interface{}, error) {
-	return raw.Query, raw.Value, nil
+func (raw *raw) Build(_ Dialect, buf Buffer) error {
+	buf.WriteString(raw.Query)
+	buf.WriteValue(raw.Value...)
+	return nil
 }

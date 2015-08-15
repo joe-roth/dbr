@@ -1,40 +1,33 @@
 package ql
 
-import (
-	"bytes"
-	"reflect"
-)
+import "reflect"
 
 // Condition abstracts AND, OR and simple conditions like eq.
 type Condition interface {
 	Builder
 }
 
-func buildCond(d Dialect, pred string, cond ...Condition) (string, []interface{}, error) {
-	buf := new(bytes.Buffer)
-	var value []interface{}
+func buildCond(d Dialect, buf Buffer, pred string, cond ...Condition) error {
 	for i, c := range cond {
 		if i > 0 {
-			buf.WriteRune(' ')
+			buf.WriteString(" ")
 			buf.WriteString(pred)
-			buf.WriteRune(' ')
+			buf.WriteString(" ")
 		}
-		query, v, err := c.Build(d)
+		buf.WriteString("(")
+		err := c.Build(d, buf)
 		if err != nil {
-			return "", nil, err
+			return err
 		}
-		buf.WriteRune('(')
-		buf.WriteString(query)
-		buf.WriteRune(')')
-		value = append(value, v...)
+		buf.WriteString(")")
 	}
-	return buf.String(), value, nil
+	return nil
 }
 
 type and []Condition
 
-func (and and) Build(d Dialect) (string, []interface{}, error) {
-	return buildCond(d, "AND", and...)
+func (and and) Build(d Dialect, buf Buffer) error {
+	return buildCond(d, buf, "AND", and...)
 }
 
 // And creates AND from a list of conditions
@@ -44,8 +37,8 @@ func And(cond ...Condition) Condition {
 
 type or []Condition
 
-func (or or) Build(d Dialect) (string, []interface{}, error) {
-	return buildCond(d, "OR", or...)
+func (or or) Build(d Dialect, buf Buffer) error {
+	return buildCond(d, buf, "OR", or...)
 }
 
 // Or creates OR from a list of conditions
@@ -58,14 +51,15 @@ type cmp struct {
 	Value  interface{}
 }
 
-func buildCmp(d Dialect, pred string, column string, value interface{}) (string, []interface{}, error) {
-	buf := new(bytes.Buffer)
+func buildCmp(d Dialect, buf Buffer, pred string, column string, value interface{}) error {
 	buf.WriteString(d.QuoteIdent(column))
-	buf.WriteRune(' ')
+	buf.WriteString(" ")
 	buf.WriteString(pred)
-	buf.WriteRune(' ')
+	buf.WriteString(" ")
 	buf.WriteString(d.Placeholder())
-	return buf.String(), []interface{}{value}, nil
+
+	buf.WriteValue(value)
+	return nil
 }
 
 type eq cmp
@@ -81,14 +75,15 @@ func Eq(column string, value interface{}) Condition {
 	}
 }
 
-func (eq *eq) Build(d Dialect) (string, []interface{}, error) {
+func (eq *eq) Build(d Dialect, buf Buffer) error {
 	if eq.Value == nil {
-		return d.QuoteIdent(eq.Column) + " IS NULL", nil, nil
+		buf.WriteString(d.QuoteIdent(eq.Column) + " IS NULL")
+		return nil
 	}
 	if reflect.ValueOf(eq.Value).Kind() == reflect.Slice {
-		return buildCmp(d, "IN", eq.Column, eq.Value)
+		return buildCmp(d, buf, "IN", eq.Column, eq.Value)
 	}
-	return buildCmp(d, "=", eq.Column, eq.Value)
+	return buildCmp(d, buf, "=", eq.Column, eq.Value)
 }
 
 type neq cmp
@@ -104,14 +99,15 @@ func Neq(column string, value interface{}) Condition {
 	}
 }
 
-func (neq *neq) Build(d Dialect) (string, []interface{}, error) {
+func (neq *neq) Build(d Dialect, buf Buffer) error {
 	if neq.Value == nil {
-		return d.QuoteIdent(neq.Column) + " IS NOT NULL", nil, nil
+		buf.WriteString(d.QuoteIdent(neq.Column) + " IS NOT NULL")
+		return nil
 	}
 	if reflect.ValueOf(neq.Value).Kind() == reflect.Slice {
-		return buildCmp(d, "NOT IN", neq.Column, neq.Value)
+		return buildCmp(d, buf, "NOT IN", neq.Column, neq.Value)
 	}
-	return buildCmp(d, "!=", neq.Column, neq.Value)
+	return buildCmp(d, buf, "!=", neq.Column, neq.Value)
 }
 
 type gt cmp
@@ -124,8 +120,8 @@ func Gt(column string, value interface{}) Condition {
 	}
 }
 
-func (gt *gt) Build(d Dialect) (string, []interface{}, error) {
-	return buildCmp(d, ">", gt.Column, gt.Value)
+func (gt *gt) Build(d Dialect, buf Buffer) error {
+	return buildCmp(d, buf, ">", gt.Column, gt.Value)
 }
 
 type gte cmp
@@ -138,8 +134,8 @@ func Gte(column string, value interface{}) Condition {
 	}
 }
 
-func (gte *gte) Build(d Dialect) (string, []interface{}, error) {
-	return buildCmp(d, ">=", gte.Column, gte.Value)
+func (gte *gte) Build(d Dialect, buf Buffer) error {
+	return buildCmp(d, buf, ">=", gte.Column, gte.Value)
 }
 
 type lt cmp
@@ -152,8 +148,8 @@ func Lt(column string, value interface{}) Condition {
 	}
 }
 
-func (lt *lt) Build(d Dialect) (string, []interface{}, error) {
-	return buildCmp(d, "<", lt.Column, lt.Value)
+func (lt *lt) Build(d Dialect, buf Buffer) error {
+	return buildCmp(d, buf, "<", lt.Column, lt.Value)
 }
 
 type lte cmp
@@ -166,6 +162,6 @@ func Lte(column string, value interface{}) Condition {
 	}
 }
 
-func (lte *lte) Build(d Dialect) (string, []interface{}, error) {
-	return buildCmp(d, "<=", lte.Column, lte.Value)
+func (lte *lte) Build(d Dialect, buf Buffer) error {
+	return buildCmp(d, buf, "<=", lte.Column, lte.Value)
 }

@@ -8,15 +8,15 @@ import (
 
 type postgreSQL struct{}
 
-func (d postgreSQL) QuoteIdent(column string) string {
-	if isSQLFunc(column) {
-		return column
+func (d postgreSQL) QuoteIdent(s string) string {
+	if isExpr(s) {
+		return s
 	}
-	part := strings.SplitN(column, ".", 2)
+	part := strings.SplitN(s, ".", 2)
 	if len(part) == 2 {
 		return d.QuoteIdent(part[0]) + "." + d.QuoteIdent(part[1])
 	}
-	return `"` + column + `"`
+	return `"` + s + `"`
 }
 
 func (d postgreSQL) EncodeString(s string) string {

@@ -1,7 +1,5 @@
 package ql
 
-import "bytes"
-
 type JoinType uint8
 
 const (
@@ -25,10 +23,8 @@ func Join(t JoinType, table interface{}, on ...Condition) Builder {
 	}
 }
 
-func (join *join) Build(d Dialect) (string, []interface{}, error) {
-	buf := new(bytes.Buffer)
-	var value []interface{}
-	buf.WriteRune(' ')
+func (join *join) Build(d Dialect, buf Buffer) error {
+	buf.WriteString(" ")
 	switch join.Type {
 	case Left:
 		buf.WriteString("LEFT ")
@@ -43,13 +39,13 @@ func (join *join) Build(d Dialect) (string, []interface{}, error) {
 		buf.WriteString(d.QuoteIdent(table))
 	default:
 		buf.WriteString(d.Placeholder())
-		value = append(value, table)
+		buf.WriteValue(table)
 	}
 	buf.WriteString(" ON ")
 	buf.WriteString(d.Placeholder())
-	value = append(value, And(join.On...))
+	buf.WriteValue(And(join.On...))
 
-	return buf.String(), value, nil
+	return nil
 }
 
 type on struct {
@@ -63,10 +59,9 @@ func On(col1, col2 string) Condition {
 	}
 }
 
-func (on *on) Build(d Dialect) (string, []interface{}, error) {
-	buf := new(bytes.Buffer)
+func (on *on) Build(d Dialect, buf Buffer) error {
 	buf.WriteString(d.QuoteIdent(on.Column1))
 	buf.WriteString(" = ")
 	buf.WriteString(d.QuoteIdent(on.Column2))
-	return buf.String(), nil, nil
+	return nil
 }

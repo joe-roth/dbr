@@ -1,7 +1,5 @@
 package ql
 
-import "bytes"
-
 // DeleteBuilder builds `DELETE ...`
 type DeleteBuilder struct {
 	raw
@@ -12,34 +10,28 @@ type DeleteBuilder struct {
 }
 
 // Build builds `DELETE ...` in dialect
-func (b *DeleteBuilder) Build(d Dialect) (string, []interface{}, error) {
+func (b *DeleteBuilder) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
-		return b.raw.Query, b.raw.Value, nil
+		buf.WriteString(b.raw.Query)
+		buf.WriteValue(b.raw.Value...)
+		return nil
 	}
 
 	if b.Table == "" {
-		return "", nil, ErrTableNotSpecified
+		return ErrTableNotSpecified
 	}
-
-	buf := new(bytes.Buffer)
-	var value []interface{}
 
 	buf.WriteString("DELETE FROM ")
 	buf.WriteString(d.QuoteIdent(b.Table))
 
 	if len(b.WhereCond) > 0 {
-		query, v, err := And(b.WhereCond...).Build(d)
+		buf.WriteString(" WHERE ")
+		err := And(b.WhereCond...).Build(d, buf)
 		if err != nil {
-			return "", nil, err
-		}
-		if query != "" {
-			buf.WriteString(" WHERE ")
-			buf.WriteString(query)
-
-			value = append(value, v...)
+			return err
 		}
 	}
-	return buf.String(), value, nil
+	return nil
 }
 
 // DeleteFrom creates a DeleteBuilder

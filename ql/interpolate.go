@@ -14,6 +14,7 @@ func Interpolate(query string, value []interface{}, d Dialect) (string, error) {
 	placeholder := d.Placeholder()
 
 	if strings.Count(query, placeholder) != len(value) {
+		fmt.Println(query, value)
 		return "", ErrBadArgument
 	}
 
@@ -46,11 +47,12 @@ func Interpolate(query string, value []interface{}, d Dialect) (string, error) {
 // return literal for different dialect
 func interpolateWithDialect(value interface{}, d Dialect) (string, error) {
 	if builder, ok := value.(Builder); ok {
-		s, v, err := builder.Build(d)
+		buf := NewBuffer()
+		err := builder.Build(d, buf)
 		if err != nil {
 			return "", err
 		}
-		s, err = Interpolate(s, v, d)
+		s, err := Interpolate(buf.String(), buf.Value(), d)
 		if err != nil {
 			return "", err
 		}

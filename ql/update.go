@@ -1,7 +1,5 @@
 package ql
 
-import "bytes"
-
 // UpdateBuilder builds `UPDATE ...`
 type UpdateBuilder struct {
 	raw
@@ -13,21 +11,20 @@ type UpdateBuilder struct {
 }
 
 // Build builds `UPDATE ...` in dialect
-func (b *UpdateBuilder) Build(d Dialect) (string, []interface{}, error) {
+func (b *UpdateBuilder) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
-		return b.raw.Query, b.raw.Value, nil
+		buf.WriteString(b.raw.Query)
+		buf.WriteValue(b.raw.Value...)
+		return nil
 	}
 
 	if b.Table == "" {
-		return "", nil, ErrTableNotSpecified
+		return ErrTableNotSpecified
 	}
 
 	if len(b.Value) == 0 {
-		return "", nil, ErrColumnNotSpecified
+		return ErrColumnNotSpecified
 	}
-
-	buf := new(bytes.Buffer)
-	var value []interface{}
 
 	buf.WriteString("UPDATE ")
 	buf.WriteString(d.QuoteIdent(b.Table))
@@ -42,23 +39,18 @@ func (b *UpdateBuilder) Build(d Dialect) (string, []interface{}, error) {
 		buf.WriteString(" = ")
 		buf.WriteString(d.Placeholder())
 
-		value = append(value, v)
+		buf.WriteValue(v)
 		i++
 	}
 
 	if len(b.WhereCond) > 0 {
-		query, v, err := And(b.WhereCond...).Build(d)
+		buf.WriteString(" WHERE ")
+		err := And(b.WhereCond...).Build(d, buf)
 		if err != nil {
-			return "", nil, err
-		}
-		if query != "" {
-			buf.WriteString(" WHERE ")
-			buf.WriteString(query)
-
-			value = append(value, v...)
+			return err
 		}
 	}
-	return buf.String(), value, nil
+	return nil
 }
 
 // Update creates an UpdateBuilder

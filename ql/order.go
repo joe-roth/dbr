@@ -1,7 +1,5 @@
 package ql
 
-import "bytes"
-
 type Direction bool
 
 // orderby directions
@@ -23,15 +21,14 @@ func Order(column string, dir Direction) Builder {
 	}
 }
 
-func (order *order) Build(d Dialect) (string, []interface{}, error) {
-	buf := new(bytes.Buffer)
+func (order *order) Build(d Dialect, buf Buffer) error {
 	buf.WriteString(d.QuoteIdent(order.Column))
-	buf.WriteRune(' ')
+	buf.WriteString(" ")
 	switch order.Direction {
 	case ASC:
 		buf.WriteString("ASC")
 	case DESC:
 		buf.WriteString("DESC")
 	}
-	return buf.String(), nil, nil
+	return nil
 }

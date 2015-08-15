@@ -155,9 +155,9 @@ func TestBasicCRUD(t *testing.T) {
 		assert.NoError(t, err)
 		assert.EqualValues(t, 1, rowsAffected)
 
-		var n uint64
+		var n NullInt64
 		sess.Select("count(*)").From("dbr_people").Where("name = ?", "jonathan1").LoadValue(&n)
-		assert.EqualValues(t, 1, n)
+		assert.EqualValues(t, 1, n.Int64)
 
 		// delete
 		result, err = sess.DeleteFrom("dbr_people").Where(ql.Eq("id", jonathan.Id)).Exec()

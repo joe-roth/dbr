@@ -64,9 +64,10 @@ func TestCondition(t *testing.T) {
 			value: []interface{}{1, 2, 3},
 		},
 	} {
-		query, value, err := test.cond.Build(dialect.MySQL)
+		buf := NewBuffer()
+		err := test.cond.Build(dialect.MySQL, buf)
 		assert.NoError(t, err)
-		assert.Equal(t, test.query, query)
-		assert.Equal(t, test.value, value)
+		assert.Equal(t, test.query, buf.String())
+		assert.Equal(t, test.value, buf.Value())
 	}
 }

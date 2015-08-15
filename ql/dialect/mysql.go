@@ -9,15 +9,15 @@ import (
 
 type mysql struct{}
 
-func (d mysql) QuoteIdent(column string) string {
-	if isSQLFunc(column) {
-		return column
+func (d mysql) QuoteIdent(s string) string {
+	if isExpr(s) {
+		return s
 	}
-	part := strings.SplitN(column, ".", 2)
+	part := strings.SplitN(s, ".", 2)
 	if len(part) == 2 {
 		return d.QuoteIdent(part[0]) + "." + d.QuoteIdent(part[1])
 	}
-	return "`" + column + "`"
+	return "`" + s + "`"
 }
 
 func (d mysql) EncodeString(s string) string {

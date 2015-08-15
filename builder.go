@@ -2,6 +2,7 @@ package dbr
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 
 	"github.com/gocraft/dbr/ql"
@@ -52,11 +53,12 @@ func (tx *Tx) SelectBySql(query string, value ...interface{}) *SelectBuilder {
 }
 
 func (b *SelectBuilder) ToSql() (string, []interface{}) {
-	s, v, err := b.Build(b.Dialect)
+	buf := ql.NewBuffer()
+	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
 	}
-	return s, v
+	return buf.String(), buf.Value()
 }
 
 func (b *SelectBuilder) Load(value interface{}) (int, error) {
@@ -200,11 +202,12 @@ func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilder {
 }
 
 func (b *InsertBuilder) ToSql() (string, []interface{}) {
-	s, v, err := b.Build(b.Dialect)
+	buf := ql.NewBuffer()
+	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
 	}
-	return s, v
+	return buf.String(), buf.Value()
 }
 
 func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
@@ -309,11 +312,12 @@ func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
 }
 
 func (b *UpdateBuilder) ToSql() (string, []interface{}) {
-	s, v, err := b.Build(b.Dialect)
+	buf := ql.NewBuffer()
+	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
 	}
-	return s, v
+	return buf.String(), buf.Value()
 }
 
 func (b *UpdateBuilder) Exec() (sql.Result, error) {
@@ -340,16 +344,16 @@ func (b *UpdateBuilder) Limit(n uint64) *UpdateBuilder {
 	return b
 }
 
-func (b *UpdateBuilder) Build(d ql.Dialect) (string, []interface{}, error) {
-	s, v, err := b.UpdateBuilder.Build(d)
+func (b *UpdateBuilder) Build(d ql.Dialect, buf ql.Buffer) error {
+	err := b.UpdateBuilder.Build(b.Dialect, buf)
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 	if b.LimitCount >= 0 {
-		s += " LIMIT ?"
-		v = append(v, b.LimitCount)
+		buf.WriteString(" LIMIT ")
+		buf.WriteString(fmt.Sprint(b.LimitCount))
 	}
-	return s, v, nil
+	return nil
 }
 
 type DeleteBuilder struct {
@@ -403,11 +407,12 @@ func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
 }
 
 func (b *DeleteBuilder) ToSql() (string, []interface{}) {
-	s, v, err := b.Build(b.Dialect)
+	buf := ql.NewBuffer()
+	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
 	}
-	return s, v
+	return buf.String(), buf.Value()
 }
 
 func (b *DeleteBuilder) Exec() (sql.Result, error) {
@@ -424,14 +429,14 @@ func (b *DeleteBuilder) Limit(n uint64) *DeleteBuilder {
 	return b
 }
 
-func (b *DeleteBuilder) Build(d ql.Dialect) (string, []interface{}, error) {
-	s, v, err := b.DeleteBuilder.Build(d)
+func (b *DeleteBuilder) Build(d ql.Dialect, buf ql.Buffer) error {
+	err := b.DeleteBuilder.Build(b.Dialect, buf)
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 	if b.LimitCount >= 0 {
-		s += " LIMIT ?"
-		v = append(v, b.LimitCount)
+		buf.WriteString(" LIMIT ")
+		buf.WriteString(fmt.Sprint(b.LimitCount))
 	}
-	return s, v, nil
+	return nil
 }

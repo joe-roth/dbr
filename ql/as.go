@@ -1,7 +1,5 @@
 package ql
 
-import "bytes"
-
 type as struct {
 	Expr  interface{}
 	Alias string
@@ -15,17 +13,15 @@ func As(expr interface{}, alias string) Builder {
 	}
 }
 
-func (as *as) Build(d Dialect) (string, []interface{}, error) {
-	buf := new(bytes.Buffer)
-	var value []interface{}
+func (as *as) Build(d Dialect, buf Buffer) error {
 	switch expr := as.Expr.(type) {
 	case string:
 		buf.WriteString(d.QuoteIdent(expr))
 	default:
 		buf.WriteString(d.Placeholder())
-		value = append(value, expr)
+		buf.WriteValue(expr)
 	}
 	buf.WriteString(" AS ")
 	buf.WriteString(d.QuoteIdent(as.Alias))
-	return buf.String(), value, nil
+	return nil
 }

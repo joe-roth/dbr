@@ -15,21 +15,20 @@ type InsertBuilder struct {
 }
 
 // Build builds `INSERT INTO ...` in dialect
-func (b *InsertBuilder) Build(d Dialect) (string, []interface{}, error) {
+func (b *InsertBuilder) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
-		return b.raw.Query, b.raw.Value, nil
+		buf.WriteString(b.raw.Query)
+		buf.WriteValue(b.raw.Value...)
+		return nil
 	}
 
 	if b.Table == "" {
-		return "", nil, ErrTableNotSpecified
+		return ErrTableNotSpecified
 	}
 
 	if len(b.Column) == 0 {
-		return "", nil, ErrColumnNotSpecified
+		return ErrColumnNotSpecified
 	}
-
-	buf := new(bytes.Buffer)
-	var value []interface{}
 
 	buf.WriteString("INSERT INTO ")
 	buf.WriteString(d.QuoteIdent(b.Table))
@@ -40,29 +39,27 @@ func (b *InsertBuilder) Build(d Dialect) (string, []interface{}, error) {
 	placeholder.WriteRune('(')
 	for i, col := range b.Column {
 		if i > 0 {
-			buf.WriteRune(',')
-			placeholder.WriteRune(',')
+			buf.WriteString(",")
+			placeholder.WriteString(",")
 		}
 		buf.WriteString(d.QuoteIdent(col))
 		placeholder.WriteString(d.Placeholder())
 	}
-	placeholder.WriteRune(')')
+	placeholder.WriteString(")")
 	placeholderStr := placeholder.String()
 
 	buf.WriteString(") VALUES ")
 
-	for i, list := range b.Value {
+	for i, tuple := range b.Value {
 		if i > 0 {
 			buf.WriteString(", ")
 		}
 		buf.WriteString(placeholderStr)
 
-		for _, v := range list {
-			value = append(value, v)
-		}
+		buf.WriteValue(tuple...)
 	}
 
-	return buf.String(), value, nil
+	return nil
 }
 
 // InsertInto creates an InsertBuilder

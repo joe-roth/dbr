@@ -1,9 +1,6 @@
 package ql
 
-import (
-	"bytes"
-	"fmt"
-)
+import "fmt"
 
 // SelectBuilder builds `SELECT ...`
 type SelectBuilder struct {
@@ -25,17 +22,16 @@ type SelectBuilder struct {
 }
 
 // Build builds `SELECT ...` in dialect
-func (b *SelectBuilder) Build(d Dialect) (string, []interface{}, error) {
+func (b *SelectBuilder) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
-		return b.raw.Query, b.raw.Value, nil
+		buf.WriteString(b.raw.Query)
+		buf.WriteValue(b.raw.Value...)
+		return nil
 	}
 
 	if len(b.Column) == 0 {
-		return "", nil, ErrColumnNotSpecified
+		return ErrColumnNotSpecified
 	}
-
-	buf := new(bytes.Buffer)
-	var value []interface{}
 
 	buf.WriteString("SELECT ")
 
@@ -52,7 +48,7 @@ func (b *SelectBuilder) Build(d Dialect) (string, []interface{}, error) {
 			buf.WriteString(d.QuoteIdent(col))
 		default:
 			buf.WriteString(d.Placeholder())
-			value = append(value, col)
+			buf.WriteValue(col)
 		}
 	}
 
@@ -63,29 +59,23 @@ func (b *SelectBuilder) Build(d Dialect) (string, []interface{}, error) {
 			buf.WriteString(d.QuoteIdent(table))
 		default:
 			buf.WriteString(d.Placeholder())
-			value = append(value, table)
+			buf.WriteValue(table)
 		}
 		if len(b.JoinTable) > 0 {
 			for _, join := range b.JoinTable {
-				query, _, err := join.Build(d)
+				err := join.Build(d, buf)
 				if err != nil {
-					return "", nil, err
+					return err
 				}
-				buf.WriteString(query)
 			}
 		}
 	}
 
 	if len(b.WhereCond) > 0 {
-		query, v, err := And(b.WhereCond...).Build(d)
+		buf.WriteString(" WHERE ")
+		err := And(b.WhereCond...).Build(d, buf)
 		if err != nil {
-			return "", nil, err
-		}
-		if query != "" {
-			buf.WriteString(" WHERE ")
-			buf.WriteString(query)
-
-			value = append(value, v...)
+			return err
 		}
 	}
 
@@ -100,15 +90,10 @@ func (b *SelectBuilder) Build(d Dialect) (string, []interface{}, error) {
 	}
 
 	if len(b.HavingCond) > 0 {
-		query, v, err := And(b.HavingCond...).Build(d)
+		buf.WriteString(" HAVING ")
+		err := And(b.HavingCond...).Build(d, buf)
 		if err != nil {
-			return "", nil, err
-		}
-		if query != "" {
-			buf.WriteString(" HAVING ")
-			buf.WriteString(query)
-
-			value = append(value, v...)
+			return err
 		}
 	}
 
@@ -118,24 +103,23 @@ func (b *SelectBuilder) Build(d Dialect) (string, []interface{}, error) {
 			if i > 0 {
 				buf.WriteString(", ")
 			}
-			query, _, err := order.Build(d)
+			err := order.Build(d, buf)
 			if err != nil {
-				return "", nil, err
+				return err
 			}
-			buf.WriteString(query)
 		}
 	}
 
 	if b.LimitCount >= 0 {
 		buf.WriteString(" LIMIT ")
-		fmt.Fprint(buf, b.LimitCount)
+		buf.WriteString(fmt.Sprint(b.LimitCount))
 	}
 
 	if b.OffsetCount >= 0 {
 		buf.WriteString(" OFFSET ")
-		fmt.Fprint(buf, b.OffsetCount)
+		buf.WriteString(fmt.Sprint(b.OffsetCount))
 	}
-	return buf.String(), value, nil
+	return nil
 }
 
 // Select creates a SelectBuilder
