@@ -77,7 +77,8 @@ func Eq(column string, value interface{}) Condition {
 
 func (eq *eq) Build(d Dialect, buf Buffer) error {
 	if eq.Value == nil {
-		buf.WriteString(d.QuoteIdent(eq.Column) + " IS NULL")
+		buf.WriteString(d.QuoteIdent(eq.Column))
+		buf.WriteString(" IS NULL")
 		return nil
 	}
 	if reflect.ValueOf(eq.Value).Kind() == reflect.Slice {
@@ -101,7 +102,8 @@ func Neq(column string, value interface{}) Condition {
 
 func (neq *neq) Build(d Dialect, buf Buffer) error {
 	if neq.Value == nil {
-		buf.WriteString(d.QuoteIdent(neq.Column) + " IS NOT NULL")
+		buf.WriteString(d.QuoteIdent(neq.Column))
+		buf.WriteString(" IS NOT NULL")
 		return nil
 	}
 	if reflect.ValueOf(neq.Value).Kind() == reflect.Slice {

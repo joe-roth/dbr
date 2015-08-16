@@ -2,6 +2,7 @@ package ql
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"reflect"
 	"unicode"
 )
@@ -28,6 +29,11 @@ func structMap(value reflect.Value) map[string]reflect.Value {
 }
 
 func structValue(m map[string]reflect.Value, value reflect.Value) {
+	if value.IsValid() {
+		if _, ok := value.Interface().(driver.Valuer); ok {
+			return
+		}
+	}
 	switch value.Kind() {
 	case reflect.Ptr:
 		structValue(m, value.Elem())
@@ -48,10 +54,11 @@ func structValue(m map[string]reflect.Value, value reflect.Value) {
 				// no tag, but we can record the field name
 				tag = camelCaseToSnakeCase(field.Name)
 			}
+			fieldValue := value.Field(i)
 			if _, ok := m[tag]; !ok {
-				m[tag] = value.Field(i)
+				m[tag] = fieldValue
 			}
-			structValue(m, value.Field(i))
+			structValue(m, fieldValue)
 		}
 	}
 }
