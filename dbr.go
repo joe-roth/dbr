@@ -73,17 +73,17 @@ type runner interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
-func exec(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect) (sql.Result, error) {
-	buf := ql.NewBuffer()
-	err := builder.Build(d, buf)
-	if err != nil {
-		return nil, err
-	}
-	query, err := ql.Interpolate(buf.String(), buf.Value(), d)
+type builder interface {
+	ToSql() (string, []interface{})
+}
+
+func exec(runner runner, log EventReceiver, builder builder, d ql.Dialect) (sql.Result, error) {
+	query, value := builder.ToSql()
+	query, err := ql.Interpolate(query, value, d)
 	if err != nil {
 		return nil, log.EventErrKv("dbr.exec.interpolate", err, kvs{
-			"sql":  buf.String(),
-			"args": fmt.Sprint(buf.Value()),
+			"sql":  query,
+			"args": fmt.Sprint(value),
 		})
 	}
 
@@ -103,17 +103,13 @@ func exec(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect) (s
 	return result, nil
 }
 
-func query(runner runner, log EventReceiver, builder ql.Builder, d ql.Dialect, v interface{}) (int, error) {
-	buf := ql.NewBuffer()
-	err := builder.Build(d, buf)
-	if err != nil {
-		return 0, err
-	}
-	query, err := ql.Interpolate(buf.String(), buf.Value(), d)
+func query(runner runner, log EventReceiver, builder builder, d ql.Dialect, v interface{}) (int, error) {
+	query, value := builder.ToSql()
+	query, err := ql.Interpolate(query, value, d)
 	if err != nil {
 		return 0, log.EventErrKv("dbr.select.interpolate", err, kvs{
-			"sql":  buf.String(),
-			"args": fmt.Sprint(buf.Value()),
+			"sql":  query,
+			"args": fmt.Sprint(value),
 		})
 	}
 
