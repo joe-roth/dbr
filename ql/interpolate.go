@@ -11,14 +11,21 @@ import (
 
 // Interpolate replaces placeholder in query with corresponding value in dialect
 func Interpolate(query string, value []interface{}, d Dialect) (string, error) {
+	buf := new(bytes.Buffer)
+	err := interpolate(query, value, d, buf)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func interpolate(query string, value []interface{}, d Dialect, w StringWriter) error {
 	placeholder := d.Placeholder()
 
 	if strings.Count(query, placeholder) != len(value) {
-		fmt.Println(query, value)
-		return "", ErrBadArgument
+		return ErrBadArgument
 	}
 
-	buf := new(bytes.Buffer)
 	valueIndex := 0
 
 	for {
@@ -26,41 +33,43 @@ func Interpolate(query string, value []interface{}, d Dialect) (string, error) {
 		if index == -1 {
 			break
 		}
-		buf.WriteString(query[:index])
+		w.WriteString(query[:index])
 		query = query[index+len(placeholder):]
 
-		s, err := interpolateWithDialect(value[valueIndex], d)
+		err := encodePlaceholder(value[valueIndex], d, w)
 		if err != nil {
-			return "", err
+			return err
 		}
-		buf.WriteString(s)
 
 		valueIndex++
 	}
 
 	// placeholder not found; write remaining query
-	buf.WriteString(query)
+	w.WriteString(query)
 
-	return buf.String(), nil
+	return nil
 }
 
-// return literal for different dialect
-func interpolateWithDialect(value interface{}, d Dialect) (string, error) {
+func encodePlaceholder(value interface{}, d Dialect, w StringWriter) error {
 	if builder, ok := value.(Builder); ok {
 		buf := NewBuffer()
 		err := builder.Build(d, buf)
 		if err != nil {
-			return "", err
-		}
-		s, err := Interpolate(buf.String(), buf.Value(), d)
-		if err != nil {
-			return "", err
+			return err
 		}
 		// subquery
-		if _, ok := value.(*SelectBuilder); ok {
-			return "(" + s + ")", nil
+		_, ok := value.(*SelectBuilder)
+		if ok {
+			w.WriteString("(")
 		}
-		return s, err
+		err = interpolate(buf.String(), buf.Value(), d, w)
+		if err != nil {
+			return err
+		}
+		if ok {
+			w.WriteString(")")
+		}
+		return nil
 	}
 
 	if valuer, ok := value.(driver.Valuer); ok {
@@ -68,19 +77,22 @@ func interpolateWithDialect(value interface{}, d Dialect) (string, error) {
 		var err error
 		value, err = valuer.Value()
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
 	if value == nil {
-		return "NULL", nil
+		w.WriteString("NULL")
+		return nil
 	}
 	v := reflect.ValueOf(value)
 	switch v.Kind() {
 	case reflect.String:
-		return d.EncodeString(v.String()), nil
+		w.WriteString(d.EncodeString(v.String()))
+		return nil
 	case reflect.Bool:
-		return d.EncodeBool(v.Bool()), nil
+		w.WriteString(d.EncodeBool(v.Bool()))
+		return nil
 	case reflect.Int:
 		fallthrough
 	case reflect.Int8:
@@ -105,38 +117,39 @@ func interpolateWithDialect(value interface{}, d Dialect) (string, error) {
 		fallthrough
 	case reflect.Float64:
 		// TODO: verify this works
-		return fmt.Sprint(v.Interface()), nil
+		w.WriteString(fmt.Sprint(v.Interface()))
+		return nil
 	case reflect.Struct:
 		if v.Type() == reflect.TypeOf(time.Time{}) {
-			return d.EncodeTime(v.Interface().(time.Time).UTC()), nil
+			w.WriteString(d.EncodeTime(v.Interface().(time.Time).UTC()))
+			return nil
 		}
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			// []byte
-			return d.EncodeBytes(v.Bytes()), nil
+			w.WriteString(d.EncodeBytes(v.Bytes()))
+			return nil
 		}
-		buf := new(bytes.Buffer)
 		if v.Len() == 0 {
-			return "", ErrNotSupported
+			return ErrNotSupported
 			// This will never match, since nothing is equal to null (not even null itself.)
-			buf.WriteString("(NULL)")
+			w.WriteString("(NULL)")
 		} else {
-			buf.WriteRune('(')
+			w.WriteString("(")
 			for i := 0; i < v.Len(); i++ {
 				if i > 0 {
-					buf.WriteRune(',')
+					w.WriteString(",")
 				}
-				s, err := interpolateWithDialect(v.Index(i).Interface(), d)
+				err := encodePlaceholder(v.Index(i).Interface(), d, w)
 				if err != nil {
-					return "", err
+					return err
 				}
-				buf.WriteString(s)
 			}
-			buf.WriteRune(')')
+			w.WriteString(")")
 		}
-		return buf.String(), nil
+		return nil
 	case reflect.Ptr:
-		return interpolateWithDialect(v.Elem().Interface(), d)
+		return encodePlaceholder(v.Elem().Interface(), d, w)
 	}
-	return "", ErrNotSupported
+	return ErrNotSupported
 }
