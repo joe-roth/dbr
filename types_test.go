@@ -29,7 +29,7 @@ func TestNullTypesScanning(t *testing.T) {
 			in: filledRecord,
 		},
 	} {
-		for _, sess := range []SessionRunner{mysqlSession, postgresSession} {
+		for _, sess := range []*Session{mysqlSession, postgresSession} {
 			test.in.Id = nextID()
 			_, err := sess.InsertInto("null_types").Columns("id", "string_val", "int64_val", "float64_val", "time_val", "bool_val").Record(test.in).Exec()
 			assert.NoError(t, err)
