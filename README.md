@@ -196,4 +196,5 @@ Inspiration from these excellent libraries:
 Authors:
 *  Jonathan Novak -- [https://github.com/cypriss](https://github.com/cypriss)
 *  Tyler Smith -- [https://github.com/tyler-smith](https://github.com/tyler-smith)
+*  Tai-Lin Chu -- [https://github.com/taylorchu](https://github.com/taylorchu)
 *  Sponsored by [UserVoice](https://eng.uservoice.com)
