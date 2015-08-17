@@ -2,21 +2,13 @@ package dialect
 
 import (
 	"fmt"
-	"strings"
 	"time"
 )
 
 type postgreSQL struct{}
 
 func (d postgreSQL) QuoteIdent(s string) string {
-	if isExpr(s) {
-		return s
-	}
-	part := strings.SplitN(s, ".", 2)
-	if len(part) == 2 {
-		return d.QuoteIdent(part[0]) + "." + d.QuoteIdent(part[1])
-	}
-	return `"` + s + `"`
+	return quoteIdent(s, `"`)
 }
 
 func (d postgreSQL) EncodeString(s string) string {

@@ -1,5 +1,7 @@
 package dialect
 
+import "strings"
+
 var (
 	// MySQL dialect
 	MySQL = mysql{}
@@ -24,4 +26,15 @@ func isExpr(s string) bool {
 		}
 	}
 	return false
+}
+
+func quoteIdent(s, quote string) string {
+	if isExpr(s) {
+		return s
+	}
+	part := strings.SplitN(s, ".", 2)
+	if len(part) == 2 {
+		return quoteIdent(part[0], quote) + "." + quoteIdent(part[1], quote)
+	}
+	return quote + s + quote
 }
