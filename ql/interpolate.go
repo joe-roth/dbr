@@ -131,7 +131,6 @@ func encodePlaceholder(value interface{}, d Dialect, w StringWriter) error {
 			return nil
 		}
 		if v.Len() == 0 {
-			return ErrNotSupported
 			// This will never match, since nothing is equal to null (not even null itself.)
 			w.WriteString("(NULL)")
 		} else {
