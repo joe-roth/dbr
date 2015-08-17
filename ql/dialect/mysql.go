@@ -9,6 +9,9 @@ import (
 type mysql struct{}
 
 func (d mysql) QuoteIdent(s string) string {
+	if isExpr(s) {
+		return s
+	}
 	return quoteIdent(s, "`")
 }
 
@@ -16,25 +19,35 @@ func (d mysql) EncodeString(s string) string {
 	buf := new(bytes.Buffer)
 
 	buf.WriteRune('\'')
-
-	for _, char := range s {
-		switch char {
-		case '\'': // single quote: ' -> \'
-			buf.WriteString("\\'")
-		case '"': // double quote: " -> \"
-			buf.WriteString("\\\"")
-		case '\\': // slash: \ -> "\\"
-			buf.WriteString("\\\\")
-		case '\n': // control: newline: \n -> "\n"
-			buf.WriteString("\\n")
-		case '\r': // control: return: \r -> "\r"
-			buf.WriteString("\\r")
-		case 0: // control: NUL: 0 -> "\x00"
-			buf.WriteString("\\x00")
-		case 0x1a: // control: \x1a -> "\x1a"
-			buf.WriteString("\\x1a")
+	// https://dev.mysql.com/doc/refman/5.7/en/string-literals.html
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case 0:
+			buf.WriteString(`\0`)
+		case '\'':
+			buf.WriteString(`\'`)
+		case '"':
+			buf.WriteString(`\"`)
+		case '\b':
+			buf.WriteString(`\b`)
+		case '\n':
+			buf.WriteString(`\n`)
+		case '\r':
+			buf.WriteString(`\r`)
+		case '\t':
+			buf.WriteString(`\t`)
+		case 26:
+			buf.WriteString(`\Z`)
+		case '\\':
+			buf.WriteString(`\\`)
+			/*
+				case '%':
+					buf.WriteString(`\%`)
+				case '_':
+					buf.WriteString(`\_`)
+			*/
 		default:
-			buf.WriteRune(char)
+			buf.WriteByte(s[i])
 		}
 	}
 

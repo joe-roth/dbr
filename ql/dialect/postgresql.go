@@ -8,6 +8,9 @@ import (
 type postgreSQL struct{}
 
 func (d postgreSQL) QuoteIdent(s string) string {
+	if isExpr(s) {
+		return s
+	}
 	return quoteIdent(s, `"`)
 }
 
