@@ -246,9 +246,13 @@ func (b *InsertBuilder) Columns(column ...string) *InsertBuilder {
 func (b *InsertBuilder) Record(structValue interface{}) *InsertBuilder {
 	v := reflect.Indirect(reflect.ValueOf(structValue))
 	if v.Kind() == reflect.Struct && v.CanSet() {
-		field := v.FieldByName("Id")
-		if field.IsValid() && field.Kind() == reflect.Int64 {
-			b.RecordID = field
+		// ID is recommended by golint here
+		for _, name := range []string{"Id", "ID"} {
+			field := v.FieldByName(name)
+			if field.IsValid() && field.Kind() == reflect.Int64 {
+				b.RecordID = field
+				break
+			}
 		}
 	}
 
