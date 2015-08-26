@@ -57,8 +57,7 @@ var nullString = []byte("null")
 // MarshalJSON correctly serializes a NullString to JSON
 func (n *NullString) MarshalJSON() ([]byte, error) {
 	if n.Valid {
-		j, e := json.Marshal(n.String)
-		return j, e
+		return json.Marshal(n.String)
 	}
 	return nullString, nil
 }
@@ -66,8 +65,7 @@ func (n *NullString) MarshalJSON() ([]byte, error) {
 // MarshalJSON correctly serializes a NullInt64 to JSON
 func (n *NullInt64) MarshalJSON() ([]byte, error) {
 	if n.Valid {
-		j, e := json.Marshal(n.Int64)
-		return j, e
+		return json.Marshal(n.Int64)
 	}
 	return nullString, nil
 }
@@ -75,8 +73,7 @@ func (n *NullInt64) MarshalJSON() ([]byte, error) {
 // MarshalJSON correctly serializes a NullFloat64 to JSON
 func (n *NullFloat64) MarshalJSON() ([]byte, error) {
 	if n.Valid {
-		j, e := json.Marshal(n.Float64)
-		return j, e
+		return json.Marshal(n.Float64)
 	}
 	return nullString, nil
 }
@@ -84,8 +81,7 @@ func (n *NullFloat64) MarshalJSON() ([]byte, error) {
 // MarshalJSON correctly serializes a NullTime to JSON
 func (n *NullTime) MarshalJSON() ([]byte, error) {
 	if n.Valid {
-		j, e := json.Marshal(n.Time)
-		return j, e
+		return json.Marshal(n.Time)
 	}
 	return nullString, nil
 }
@@ -93,8 +89,7 @@ func (n *NullTime) MarshalJSON() ([]byte, error) {
 // MarshalJSON correctly serializes a NullBool to JSON
 func (n *NullBool) MarshalJSON() ([]byte, error) {
 	if n.Valid {
-		j, e := json.Marshal(n.Bool)
-		return j, e
+		return json.Marshal(n.Bool)
 	}
 	return nullString, nil
 }
