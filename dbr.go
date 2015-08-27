@@ -55,7 +55,7 @@ func (conn *Connection) NewSession(log EventReceiver) *Session {
 
 // SessionRunner can do anything that a Session can except start a transaction.
 type SessionRunner interface {
-	Select(col ...interface{}) *SelectBuilder
+	Select(column ...string) *SelectBuilder
 	SelectBySql(query string, value ...interface{}) *SelectBuilder
 
 	InsertInto(table string) *InsertBuilder
@@ -139,3 +139,9 @@ func query(runner runner, log EventReceiver, builder builder, d ql.Dialect, v in
 var (
 	Expr = ql.Expr
 )
+
+// Don't break the API
+// FIXME: This will be removed in the future
+func Interpolate(query string, value []interface{}) (string, error) {
+	return ql.Interpolate(query, value, dialect.MySQL)
+}

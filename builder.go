@@ -16,21 +16,29 @@ type SelectBuilder struct {
 	*ql.SelectBuilder
 }
 
-func (sess *Session) Select(column ...interface{}) *SelectBuilder {
+func prepareSelect(a []string) []interface{} {
+	b := make([]interface{}, len(a))
+	for i := range a {
+		b[i] = a[i]
+	}
+	return b
+}
+
+func (sess *Session) Select(column ...string) *SelectBuilder {
 	return &SelectBuilder{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		SelectBuilder: ql.Select(column...),
+		SelectBuilder: ql.Select(prepareSelect(column)...),
 	}
 }
 
-func (tx *Tx) Select(column ...interface{}) *SelectBuilder {
+func (tx *Tx) Select(column ...string) *SelectBuilder {
 	return &SelectBuilder{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		SelectBuilder: ql.Select(column...),
+		SelectBuilder: ql.Select(prepareSelect(column)...),
 	}
 }
 
