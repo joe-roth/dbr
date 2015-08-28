@@ -16,7 +16,7 @@ func Load(rows *sql.Rows, value interface{}) (int, error) {
 
 	v := reflect.ValueOf(value)
 	if v.Kind() != reflect.Ptr {
-		return 0, ErrBadArgument
+		return 0, ErrLoadNonPointer
 	}
 	v = v.Elem()
 	isSlice := v.Kind() == reflect.Slice && v.Type().Elem().Kind() != reflect.Uint8

@@ -23,7 +23,7 @@ func interpolate(query string, value []interface{}, d Dialect, w StringWriter) e
 	placeholder := d.Placeholder()
 
 	if strings.Count(query, placeholder) != len(value) {
-		return ErrBadArgument
+		return ErrPlaceholderCount
 	}
 
 	valueIndex := 0
