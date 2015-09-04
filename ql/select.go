@@ -24,9 +24,7 @@ type SelectBuilder struct {
 // Build builds `SELECT ...` in dialect
 func (b *SelectBuilder) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
-		buf.WriteString(b.raw.Query)
-		buf.WriteValue(b.raw.Value...)
-		return nil
+		return b.raw.Build(d, buf)
 	}
 
 	if len(b.Column) == 0 {

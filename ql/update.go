@@ -13,9 +13,7 @@ type UpdateBuilder struct {
 // Build builds `UPDATE ...` in dialect
 func (b *UpdateBuilder) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
-		buf.WriteString(b.raw.Query)
-		buf.WriteValue(b.raw.Value...)
-		return nil
+		return b.raw.Build(d, buf)
 	}
 
 	if b.Table == "" {
