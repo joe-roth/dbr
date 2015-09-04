@@ -57,12 +57,17 @@ func TestInterpolate(t *testing.T) {
 		{
 			query: "?",
 			value: []interface{}{Select("a").From("table")},
-			want:  "(SELECT `a` FROM `table`)",
+			want:  "(SELECT a FROM table)",
 		},
 		{
 			query: "?",
-			value: []interface{}{As(Select("a").From("table"), "a1")},
-			want:  "(SELECT `a` FROM `table`) AS `a1`",
+			value: []interface{}{I("a1").As("a2")},
+			want:  "`a1` AS `a2`",
+		},
+		{
+			query: "?",
+			value: []interface{}{Select("a").From("table").As("a1")},
+			want:  "(SELECT a FROM table) AS `a1`",
 		},
 		{
 			query: "?",

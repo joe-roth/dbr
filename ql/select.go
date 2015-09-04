@@ -13,7 +13,7 @@ type SelectBuilder struct {
 	JoinTable []Builder
 
 	WhereCond  []Condition
-	Group      []string
+	Group      []Builder
 	HavingCond []Condition
 	Order      []Builder
 
@@ -43,7 +43,8 @@ func (b *SelectBuilder) Build(d Dialect, buf Buffer) error {
 		}
 		switch col := col.(type) {
 		case string:
-			buf.WriteString(d.QuoteIdent(col))
+			// FIXME: no quote ident
+			buf.WriteString(col)
 		default:
 			buf.WriteString(d.Placeholder())
 			buf.WriteValue(col)
@@ -54,7 +55,8 @@ func (b *SelectBuilder) Build(d Dialect, buf Buffer) error {
 		buf.WriteString(" FROM ")
 		switch table := b.Table.(type) {
 		case string:
-			buf.WriteString(d.QuoteIdent(table))
+			// FIXME: no quote ident
+			buf.WriteString(table)
 		default:
 			buf.WriteString(d.Placeholder())
 			buf.WriteValue(table)
@@ -79,11 +81,14 @@ func (b *SelectBuilder) Build(d Dialect, buf Buffer) error {
 
 	if len(b.Group) > 0 {
 		buf.WriteString(" GROUP BY ")
-		for i, col := range b.Group {
+		for i, group := range b.Group {
 			if i > 0 {
 				buf.WriteString(", ")
 			}
-			buf.WriteString(d.QuoteIdent(col))
+			err := group.Build(d, buf)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -177,7 +182,9 @@ func (b *SelectBuilder) Having(query interface{}, value ...interface{}) *SelectB
 
 // GroupBy specifies columns for grouping
 func (b *SelectBuilder) GroupBy(col ...string) *SelectBuilder {
-	b.Group = col
+	for _, group := range col {
+		b.Group = append(b.Group, Expr(group))
+	}
 	return b
 }
 
@@ -203,4 +210,16 @@ func (b *SelectBuilder) Offset(n uint64) *SelectBuilder {
 func (b *SelectBuilder) Join(t JoinType, table interface{}, cond ...Condition) *SelectBuilder {
 	b.JoinTable = append(b.JoinTable, Join(t, table, cond...))
 	return b
+}
+
+// As creates alias for select statement
+func (b *SelectBuilder) As(alias string) Builder {
+	return BuildFunc(func(d Dialect, buf Buffer) error {
+		buf.WriteString(d.Placeholder())
+		buf.WriteValue(b)
+
+		buf.WriteString(" AS ")
+		buf.WriteString(d.QuoteIdent(alias))
+		return nil
+	})
 }

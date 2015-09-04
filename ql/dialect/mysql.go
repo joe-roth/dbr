@@ -9,9 +9,6 @@ import (
 type mysql struct{}
 
 func (d mysql) QuoteIdent(s string) string {
-	if isExpr(s) {
-		return s
-	}
 	return quoteIdent(s, "`")
 }
 

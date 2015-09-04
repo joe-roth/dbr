@@ -13,7 +13,7 @@ func TestSelectBuilder(t *testing.T) {
 	builder := Select("a", "b").From(sub).Join(Left, "table2", on).Distinct().Where(Eq("c", 1)).GroupBy("d").Having(Eq("e", 2)).OrderBy("f", ASC).Limit(3).Offset(4)
 	err := builder.Build(dialect.MySQL, buf)
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT DISTINCT `a`, `b` FROM ? LEFT JOIN `table2` ON ? WHERE (`c` = ?) GROUP BY `d` HAVING (`e` = ?) ORDER BY `f` ASC LIMIT 3 OFFSET 4", buf.String())
+	assert.Equal(t, "SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` ON ? WHERE (`c` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 3 OFFSET 4", buf.String())
 	// two functions cannot be compared
 	assert.Equal(t, 4, len(buf.Value()))
 }

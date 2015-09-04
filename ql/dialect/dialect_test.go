@@ -12,14 +12,6 @@ func TestMySQL(t *testing.T) {
 		want string
 	}{
 		{
-			in:   "*",
-			want: "*",
-		},
-		{
-			in:   "COUNT(col)",
-			want: "COUNT(col)",
-		},
-		{
 			in:   "table.col",
 			want: "`table`.`col`",
 		},
@@ -37,14 +29,6 @@ func TestPostgreSQL(t *testing.T) {
 		in   string
 		want string
 	}{
-		{
-			in:   "*",
-			want: "*",
-		},
-		{
-			in:   "COUNT(col)",
-			want: "COUNT(col)",
-		},
 		{
 			in:   "table.col",
 			want: `"table"."col"`,
