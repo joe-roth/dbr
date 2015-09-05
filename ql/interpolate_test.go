@@ -69,11 +69,6 @@ func TestInterpolate(t *testing.T) {
 			value: []interface{}{Select("a").From("table").As("a1")},
 			want:  "(SELECT a FROM table) AS `a1`",
 		},
-		{
-			query: "?",
-			value: []interface{}{[]int{}},
-			want:  "(NULL)",
-		},
 	} {
 		s, err := Interpolate(test.query, test.value, dialect.MySQL)
 		assert.NoError(t, err)

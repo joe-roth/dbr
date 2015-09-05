@@ -131,21 +131,20 @@ func encodePlaceholder(value interface{}, d Dialect, w StringWriter) error {
 			return nil
 		}
 		if v.Len() == 0 {
-			// This will never match, since nothing is equal to null (not even null itself.)
-			w.WriteString("(NULL)")
-		} else {
-			w.WriteString("(")
-			for i := 0; i < v.Len(); i++ {
-				if i > 0 {
-					w.WriteString(",")
-				}
-				err := encodePlaceholder(v.Index(i).Interface(), d, w)
-				if err != nil {
-					return err
-				}
-			}
-			w.WriteString(")")
+			// FIXME: support zero-length slice
+			return ErrNotSupported
 		}
+		w.WriteString("(")
+		for i := 0; i < v.Len(); i++ {
+			if i > 0 {
+				w.WriteString(",")
+			}
+			err := encodePlaceholder(v.Index(i).Interface(), d, w)
+			if err != nil {
+				return err
+			}
+		}
+		w.WriteString(")")
 		return nil
 	case reflect.Ptr:
 		return encodePlaceholder(v.Elem().Interface(), d, w)

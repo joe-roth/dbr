@@ -60,7 +60,12 @@ func Eq(column string, value interface{}) Condition {
 			buf.WriteString(" IS NULL")
 			return nil
 		}
-		if reflect.ValueOf(value).Kind() == reflect.Slice {
+		v := reflect.ValueOf(value)
+		if v.Kind() == reflect.Slice {
+			if v.Len() == 0 {
+				buf.WriteString(d.EncodeBool(false))
+				return nil
+			}
 			return buildCmp(d, buf, "IN", column, value)
 		}
 		return buildCmp(d, buf, "=", column, value)
@@ -78,7 +83,12 @@ func Neq(column string, value interface{}) Condition {
 			buf.WriteString(" IS NOT NULL")
 			return nil
 		}
-		if reflect.ValueOf(value).Kind() == reflect.Slice {
+		v := reflect.ValueOf(value)
+		if v.Kind() == reflect.Slice {
+			if v.Len() == 0 {
+				buf.WriteString(d.EncodeBool(true))
+				return nil
+			}
 			return buildCmp(d, buf, "NOT IN", column, value)
 		}
 		return buildCmp(d, buf, "!=", column, value)

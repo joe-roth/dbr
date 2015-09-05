@@ -25,8 +25,8 @@ func TestCondition(t *testing.T) {
 		},
 		{
 			cond:  Eq("col", []int{}),
-			query: "`col` IN ?",
-			value: []interface{}{[]int{}},
+			query: "0",
+			value: nil,
 		},
 		{
 			cond:  Neq("col", 1),
