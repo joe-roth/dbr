@@ -214,12 +214,5 @@ func (b *SelectBuilder) Join(t JoinType, table interface{}, cond ...Condition) *
 
 // As creates alias for select statement
 func (b *SelectBuilder) As(alias string) Builder {
-	return BuildFunc(func(d Dialect, buf Buffer) error {
-		buf.WriteString(d.Placeholder())
-		buf.WriteValue(b)
-
-		buf.WriteString(" AS ")
-		buf.WriteString(d.QuoteIdent(alias))
-		return nil
-	})
+	return as(b, alias)
 }

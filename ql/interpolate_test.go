@@ -69,6 +69,16 @@ func TestInterpolate(t *testing.T) {
 			value: []interface{}{Select("a").From("table").As("a1")},
 			want:  "(SELECT a FROM table) AS `a1`",
 		},
+		{
+			query: "?",
+			value: []interface{}{
+				UnionAll(
+					Select("a").From("table1"),
+					Select("b").From("table2"),
+				).As("t"),
+			},
+			want: "((SELECT a FROM table1) UNION ALL (SELECT b FROM table2)) AS `t`",
+		},
 	} {
 		s, err := Interpolate(test.query, test.value, dialect.MySQL)
 		assert.NoError(t, err)

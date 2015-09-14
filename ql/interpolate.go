@@ -57,16 +57,21 @@ func encodePlaceholder(value interface{}, d Dialect, w StringWriter) error {
 		if err != nil {
 			return err
 		}
-		// subquery
-		_, ok := value.(*SelectBuilder)
-		if ok {
+		paren := true
+		switch value.(type) {
+		case *SelectBuilder:
+		case *union:
+		default:
+			paren = false
+		}
+		if paren {
 			w.WriteString("(")
 		}
 		err = interpolate(buf.String(), buf.Value(), d, w)
 		if err != nil {
 			return err
 		}
-		if ok {
+		if paren {
 			w.WriteString(")")
 		}
 		return nil

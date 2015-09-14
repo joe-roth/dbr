@@ -10,9 +10,13 @@ func (i I) Build(d Dialect, buf Buffer) error {
 
 // As creates an alias for expr. e.g. SELECT `a1` AS `a2`
 func (i I) As(alias string) Builder {
+	return as(i, alias)
+}
+
+func as(expr interface{}, alias string) Builder {
 	return BuildFunc(func(d Dialect, buf Buffer) error {
 		buf.WriteString(d.Placeholder())
-		buf.WriteValue(i)
+		buf.WriteValue(expr)
 		buf.WriteString(" AS ")
 		buf.WriteString(d.QuoteIdent(alias))
 		return nil
