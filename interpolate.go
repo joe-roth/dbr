@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// Interpolate replaces placeholder in query with corresponding value in dialect
-func Interpolate(query string, value []interface{}, d Dialect) (string, error) {
+// InterpolateForDialect replaces placeholder in query with corresponding value in dialect
+func InterpolateForDialect(query string, value []interface{}, d Dialect) (string, error) {
 	buf := new(bytes.Buffer)
 	err := interpolate(query, value, d, buf)
 	if err != nil {

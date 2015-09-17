@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInterpolate(t *testing.T) {
+func TestInterpolateForDialect(t *testing.T) {
 	for _, test := range []struct {
 		query string
 		value []interface{}
@@ -80,7 +80,7 @@ func TestInterpolate(t *testing.T) {
 			want: "((SELECT a FROM table1) UNION ALL (SELECT b FROM table2)) AS `t`",
 		},
 	} {
-		s, err := Interpolate(test.query, test.value, dialect.MySQL)
+		s, err := InterpolateForDialect(test.query, test.value, dialect.MySQL)
 		assert.NoError(t, err)
 		assert.Equal(t, test.want, s)
 	}

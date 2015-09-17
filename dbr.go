@@ -78,7 +78,7 @@ type builder interface {
 
 func exec(runner runner, log EventReceiver, builder builder, d Dialect) (sql.Result, error) {
 	query, value := builder.ToSql()
-	query, err := Interpolate(query, value, d)
+	query, err := InterpolateForDialect(query, value, d)
 	if err != nil {
 		return nil, log.EventErrKv("dbr.exec.interpolate", err, kvs{
 			"sql":  query,
@@ -104,7 +104,7 @@ func exec(runner runner, log EventReceiver, builder builder, d Dialect) (sql.Res
 
 func query(runner runner, log EventReceiver, builder builder, d Dialect, v interface{}) (int, error) {
 	query, value := builder.ToSql()
-	query, err := Interpolate(query, value, d)
+	query, err := InterpolateForDialect(query, value, d)
 	if err != nil {
 		return 0, log.EventErrKv("dbr.select.interpolate", err, kvs{
 			"sql":  query,
@@ -137,5 +137,5 @@ func query(runner runner, log EventReceiver, builder builder, d Dialect, v inter
 // Don't break the API
 // FIXME: This will be removed in the future
 func Interpolate(query string, value []interface{}) (string, error) {
-	return Interpolate(query, value, dialect.MySQL)
+	return InterpolateForDialect(query, value, dialect.MySQL)
 }

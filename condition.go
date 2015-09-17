@@ -2,24 +2,24 @@ package dbr
 
 import "reflect"
 
-type And map[string]interface{}
+type AndMap map[string]interface{}
 
-func (and And) Build(d ql.Dialect, buf ql.Buffer) error {
-	var cond []ql.Condition
+func (and AndMap) Build(d Dialect, buf Buffer) error {
+	var cond []Condition
 	for col, val := range and {
-		cond = append(cond, ql.Eq(col, val))
+		cond = append(cond, Eq(col, val))
 	}
-	return ql.And(cond...).Build(d, buf)
+	return And(cond...).Build(d, buf)
 }
 
-type Or map[string]interface{}
+type OrMap map[string]interface{}
 
-func (or Or) Build(d ql.Dialect, buf ql.Buffer) error {
-	var cond []ql.Condition
+func (or OrMap) Build(d Dialect, buf Buffer) error {
+	var cond []Condition
 	for col, val := range or {
-		cond = append(cond, ql.Eq(col, val))
+		cond = append(cond, Eq(col, val))
 	}
-	return ql.Or(cond...).Build(d, buf)
+	return Or(cond...).Build(d, buf)
 }
 
 // Condition abstracts AND, OR and simple conditions like eq.

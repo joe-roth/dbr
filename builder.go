@@ -18,7 +18,7 @@ func (b BuildFunc) Build(d Dialect, buf Buffer) error {
 	return b(d, buf)
 }
 
-type SelectBuilder struct {
+type SelectBuilderSession struct {
 	runner
 	EventReceiver
 	Dialect Dialect
@@ -34,8 +34,8 @@ func prepareSelect(a []string) []interface{} {
 	return b
 }
 
-func (sess *Session) Select(column ...string) *SelectBuilder {
-	return &SelectBuilder{
+func (sess *Session) Select(column ...string) *SelectBuilderSession {
+	return &SelectBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -43,8 +43,8 @@ func (sess *Session) Select(column ...string) *SelectBuilder {
 	}
 }
 
-func (tx *Tx) Select(column ...string) *SelectBuilder {
-	return &SelectBuilder{
+func (tx *Tx) Select(column ...string) *SelectBuilderSession {
+	return &SelectBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -52,8 +52,8 @@ func (tx *Tx) Select(column ...string) *SelectBuilder {
 	}
 }
 
-func (sess *Session) SelectBySql(query string, value ...interface{}) *SelectBuilder {
-	return &SelectBuilder{
+func (sess *Session) SelectBySql(query string, value ...interface{}) *SelectBuilderSession {
+	return &SelectBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -61,8 +61,8 @@ func (sess *Session) SelectBySql(query string, value ...interface{}) *SelectBuil
 	}
 }
 
-func (tx *Tx) SelectBySql(query string, value ...interface{}) *SelectBuilder {
-	return &SelectBuilder{
+func (tx *Tx) SelectBySql(query string, value ...interface{}) *SelectBuilderSession {
+	return &SelectBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -70,7 +70,7 @@ func (tx *Tx) SelectBySql(query string, value ...interface{}) *SelectBuilder {
 	}
 }
 
-func (b *SelectBuilder) ToSql() (string, []interface{}) {
+func (b *SelectBuilderSession) ToSql() (string, []interface{}) {
 	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
@@ -79,11 +79,11 @@ func (b *SelectBuilder) ToSql() (string, []interface{}) {
 	return buf.String(), buf.Value()
 }
 
-func (b *SelectBuilder) Load(value interface{}) (int, error) {
+func (b *SelectBuilderSession) Load(value interface{}) (int, error) {
 	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
 }
 
-func (b *SelectBuilder) LoadStruct(value interface{}) error {
+func (b *SelectBuilderSession) LoadStruct(value interface{}) error {
 	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
@@ -94,11 +94,11 @@ func (b *SelectBuilder) LoadStruct(value interface{}) error {
 	return nil
 }
 
-func (b *SelectBuilder) LoadStructs(value interface{}) (int, error) {
+func (b *SelectBuilderSession) LoadStructs(value interface{}) (int, error) {
 	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
 }
 
-func (b *SelectBuilder) LoadValue(value interface{}) error {
+func (b *SelectBuilderSession) LoadValue(value interface{}) error {
 	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
@@ -109,46 +109,46 @@ func (b *SelectBuilder) LoadValue(value interface{}) error {
 	return nil
 }
 
-func (b *SelectBuilder) LoadValues(value interface{}) (int, error) {
+func (b *SelectBuilderSession) LoadValues(value interface{}) (int, error) {
 	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
 }
 
-func (b *SelectBuilder) Join(t JoinType, table interface{}, cond ...Condition) *SelectBuilder {
+func (b *SelectBuilderSession) Join(t JoinType, table interface{}, cond ...Condition) *SelectBuilderSession {
 	b.Join(t, table, cond...)
 	return b
 }
 
-func (b *SelectBuilder) Distinct() *SelectBuilder {
+func (b *SelectBuilderSession) Distinct() *SelectBuilderSession {
 	b.SelectBuilder.Distinct()
 	return b
 }
 
-func (b *SelectBuilder) From(table interface{}) *SelectBuilder {
+func (b *SelectBuilderSession) From(table interface{}) *SelectBuilderSession {
 	b.SelectBuilder.From(table)
 	return b
 }
 
-func (b *SelectBuilder) GroupBy(col ...string) *SelectBuilder {
+func (b *SelectBuilderSession) GroupBy(col ...string) *SelectBuilderSession {
 	b.SelectBuilder.GroupBy(col...)
 	return b
 }
 
-func (b *SelectBuilder) Having(query interface{}, value ...interface{}) *SelectBuilder {
+func (b *SelectBuilderSession) Having(query interface{}, value ...interface{}) *SelectBuilderSession {
 	b.SelectBuilder.Having(query, value...)
 	return b
 }
 
-func (b *SelectBuilder) Limit(n uint64) *SelectBuilder {
+func (b *SelectBuilderSession) Limit(n uint64) *SelectBuilderSession {
 	b.SelectBuilder.Limit(n)
 	return b
 }
 
-func (b *SelectBuilder) Offset(n uint64) *SelectBuilder {
+func (b *SelectBuilderSession) Offset(n uint64) *SelectBuilderSession {
 	b.SelectBuilder.Offset(n)
 	return b
 }
 
-func (b *SelectBuilder) OrderDir(col string, isAsc bool) *SelectBuilder {
+func (b *SelectBuilderSession) OrderDir(col string, isAsc bool) *SelectBuilderSession {
 	if isAsc {
 		b.SelectBuilder.OrderBy(col, ASC)
 	} else {
@@ -157,23 +157,23 @@ func (b *SelectBuilder) OrderDir(col string, isAsc bool) *SelectBuilder {
 	return b
 }
 
-func (b *SelectBuilder) Paginate(page, perPage uint64) *SelectBuilder {
+func (b *SelectBuilderSession) Paginate(page, perPage uint64) *SelectBuilderSession {
 	b.Limit(perPage)
 	b.Offset((page - 1) * perPage)
 	return b
 }
 
-func (b *SelectBuilder) OrderBy(col string) *SelectBuilder {
+func (b *SelectBuilderSession) OrderBy(col string) *SelectBuilderSession {
 	b.SelectBuilder.Order = append(b.SelectBuilder.Order, Expr(col))
 	return b
 }
 
-func (b *SelectBuilder) Where(query interface{}, value ...interface{}) *SelectBuilder {
+func (b *SelectBuilderSession) Where(query interface{}, value ...interface{}) *SelectBuilderSession {
 	b.SelectBuilder.Where(query, value...)
 	return b
 }
 
-type InsertBuilder struct {
+type InsertBuilderSession struct {
 	runner
 	EventReceiver
 	Dialect Dialect
@@ -183,8 +183,8 @@ type InsertBuilder struct {
 	*InsertBuilder
 }
 
-func (sess *Session) InsertInto(table string) *InsertBuilder {
-	return &InsertBuilder{
+func (sess *Session) InsertInto(table string) *InsertBuilderSession {
+	return &InsertBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -192,8 +192,8 @@ func (sess *Session) InsertInto(table string) *InsertBuilder {
 	}
 }
 
-func (tx *Tx) InsertInto(table string) *InsertBuilder {
-	return &InsertBuilder{
+func (tx *Tx) InsertInto(table string) *InsertBuilderSession {
+	return &InsertBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -201,8 +201,8 @@ func (tx *Tx) InsertInto(table string) *InsertBuilder {
 	}
 }
 
-func (sess *Session) InsertBySql(query string, value ...interface{}) *InsertBuilder {
-	return &InsertBuilder{
+func (sess *Session) InsertBySql(query string, value ...interface{}) *InsertBuilderSession {
+	return &InsertBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -210,8 +210,8 @@ func (sess *Session) InsertBySql(query string, value ...interface{}) *InsertBuil
 	}
 }
 
-func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilder {
-	return &InsertBuilder{
+func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilderSession {
+	return &InsertBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -219,7 +219,7 @@ func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilder {
 	}
 }
 
-func (b *InsertBuilder) ToSql() (string, []interface{}) {
+func (b *InsertBuilderSession) ToSql() (string, []interface{}) {
 	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
@@ -228,7 +228,7 @@ func (b *InsertBuilder) ToSql() (string, []interface{}) {
 	return buf.String(), buf.Value()
 }
 
-func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
+func (b *InsertBuilderSession) Pair(column string, value interface{}) *InsertBuilderSession {
 	b.Column = append(b.Column, column)
 	switch len(b.Value) {
 	case 0:
@@ -241,7 +241,7 @@ func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
 	return b
 }
 
-func (b *InsertBuilder) Exec() (sResult, error) {
+func (b *InsertBuilderSession) Exec() (sql.Result, error) {
 	result, err := exec(b.runner, b.EventReceiver, b, b.Dialect)
 	if err != nil {
 		return nil, err
@@ -256,12 +256,12 @@ func (b *InsertBuilder) Exec() (sResult, error) {
 	return result, nil
 }
 
-func (b *InsertBuilder) Columns(column ...string) *InsertBuilder {
+func (b *InsertBuilderSession) Columns(column ...string) *InsertBuilderSession {
 	b.InsertBuilder.Columns(column...)
 	return b
 }
 
-func (b *InsertBuilder) Record(structValue interface{}) *InsertBuilder {
+func (b *InsertBuilderSession) Record(structValue interface{}) *InsertBuilderSession {
 	v := reflect.Indirect(reflect.ValueOf(structValue))
 	if v.Kind() == reflect.Struct && v.CanSet() {
 		// ID is recommended by golint here
@@ -278,12 +278,12 @@ func (b *InsertBuilder) Record(structValue interface{}) *InsertBuilder {
 	return b
 }
 
-func (b *InsertBuilder) Values(value ...interface{}) *InsertBuilder {
+func (b *InsertBuilderSession) Values(value ...interface{}) *InsertBuilderSession {
 	b.InsertBuilder.Values(value...)
 	return b
 }
 
-type UpdateBuilder struct {
+type UpdateBuilderSession struct {
 	runner
 	EventReceiver
 	Dialect Dialect
@@ -293,8 +293,8 @@ type UpdateBuilder struct {
 	LimitCount int64
 }
 
-func (sess *Session) Update(table string) *UpdateBuilder {
-	return &UpdateBuilder{
+func (sess *Session) Update(table string) *UpdateBuilderSession {
+	return &UpdateBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -303,8 +303,8 @@ func (sess *Session) Update(table string) *UpdateBuilder {
 	}
 }
 
-func (tx *Tx) Update(table string) *UpdateBuilder {
-	return &UpdateBuilder{
+func (tx *Tx) Update(table string) *UpdateBuilderSession {
+	return &UpdateBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -313,8 +313,8 @@ func (tx *Tx) Update(table string) *UpdateBuilder {
 	}
 }
 
-func (sess *Session) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
-	return &UpdateBuilder{
+func (sess *Session) UpdateBySql(query string, value ...interface{}) *UpdateBuilderSession {
+	return &UpdateBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -323,8 +323,8 @@ func (sess *Session) UpdateBySql(query string, value ...interface{}) *UpdateBuil
 	}
 }
 
-func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
-	return &UpdateBuilder{
+func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilderSession {
+	return &UpdateBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -333,7 +333,7 @@ func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
 	}
 }
 
-func (b *UpdateBuilder) ToSql() (string, []interface{}) {
+func (b *UpdateBuilderSession) ToSql() (string, []interface{}) {
 	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
@@ -342,31 +342,31 @@ func (b *UpdateBuilder) ToSql() (string, []interface{}) {
 	return buf.String(), buf.Value()
 }
 
-func (b *UpdateBuilder) Exec() (sResult, error) {
+func (b *UpdateBuilderSession) Exec() (sql.Result, error) {
 	return exec(b.runner, b.EventReceiver, b, b.Dialect)
 }
 
-func (b *UpdateBuilder) Set(column string, value interface{}) *UpdateBuilder {
+func (b *UpdateBuilderSession) Set(column string, value interface{}) *UpdateBuilderSession {
 	b.UpdateBuilder.Set(column, value)
 	return b
 }
 
-func (b *UpdateBuilder) SetMap(m map[string]interface{}) *UpdateBuilder {
+func (b *UpdateBuilderSession) SetMap(m map[string]interface{}) *UpdateBuilderSession {
 	b.UpdateBuilder.SetMap(m)
 	return b
 }
 
-func (b *UpdateBuilder) Where(query interface{}, value ...interface{}) *UpdateBuilder {
+func (b *UpdateBuilderSession) Where(query interface{}, value ...interface{}) *UpdateBuilderSession {
 	b.UpdateBuilder.Where(query, value...)
 	return b
 }
 
-func (b *UpdateBuilder) Limit(n uint64) *UpdateBuilder {
+func (b *UpdateBuilderSession) Limit(n uint64) *UpdateBuilderSession {
 	b.LimitCount = int64(n)
 	return b
 }
 
-func (b *UpdateBuilder) Build(d Dialect, buf Buffer) error {
+func (b *UpdateBuilderSession) Build(d Dialect, buf Buffer) error {
 	err := b.UpdateBuilder.Build(b.Dialect, buf)
 	if err != nil {
 		return err
@@ -378,7 +378,7 @@ func (b *UpdateBuilder) Build(d Dialect, buf Buffer) error {
 	return nil
 }
 
-type DeleteBuilder struct {
+type DeleteBuilderSession struct {
 	runner
 	EventReceiver
 	Dialect Dialect
@@ -388,8 +388,8 @@ type DeleteBuilder struct {
 	LimitCount int64
 }
 
-func (sess *Session) DeleteFrom(table string) *DeleteBuilder {
-	return &DeleteBuilder{
+func (sess *Session) DeleteFrom(table string) *DeleteBuilderSession {
+	return &DeleteBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -398,8 +398,8 @@ func (sess *Session) DeleteFrom(table string) *DeleteBuilder {
 	}
 }
 
-func (tx *Tx) DeleteFrom(table string) *DeleteBuilder {
-	return &DeleteBuilder{
+func (tx *Tx) DeleteFrom(table string) *DeleteBuilderSession {
+	return &DeleteBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -408,8 +408,8 @@ func (tx *Tx) DeleteFrom(table string) *DeleteBuilder {
 	}
 }
 
-func (sess *Session) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
-	return &DeleteBuilder{
+func (sess *Session) DeleteBySql(query string, value ...interface{}) *DeleteBuilderSession {
+	return &DeleteBuilderSession{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
@@ -418,8 +418,8 @@ func (sess *Session) DeleteBySql(query string, value ...interface{}) *DeleteBuil
 	}
 }
 
-func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
-	return &DeleteBuilder{
+func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilderSession {
+	return &DeleteBuilderSession{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
@@ -428,7 +428,7 @@ func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
 	}
 }
 
-func (b *DeleteBuilder) ToSql() (string, []interface{}) {
+func (b *DeleteBuilderSession) ToSql() (string, []interface{}) {
 	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
@@ -437,21 +437,21 @@ func (b *DeleteBuilder) ToSql() (string, []interface{}) {
 	return buf.String(), buf.Value()
 }
 
-func (b *DeleteBuilder) Exec() (sql.Result, error) {
+func (b *DeleteBuilderSession) Exec() (sql.Result, error) {
 	return exec(b.runner, b.EventReceiver, b, b.Dialect)
 }
 
-func (b *DeleteBuilder) Where(query interface{}, value ...interface{}) *DeleteBuilder {
+func (b *DeleteBuilderSession) Where(query interface{}, value ...interface{}) *DeleteBuilderSession {
 	b.DeleteBuilder.Where(query, value...)
 	return b
 }
 
-func (b *DeleteBuilder) Limit(n uint64) *DeleteBuilder {
+func (b *DeleteBuilderSession) Limit(n uint64) *DeleteBuilderSession {
 	b.LimitCount = int64(n)
 	return b
 }
 
-func (b *DeleteBuilder) Build(d Dialect, buf Buffer) error {
+func (b *DeleteBuilderSession) Build(d Dialect, buf Buffer) error {
 	err := b.DeleteBuilder.Build(b.Dialect, buf)
 	if err != nil {
 		return err
