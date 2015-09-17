@@ -4,16 +4,26 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-
-	"github.com/gocraft/dbr/ql"
 )
+
+// Builder builds sql in one dialect like MySQL/PostgreSQL
+// e.g. XxxBuilder, Condition
+type Builder interface {
+	Build(Dialect, Buffer) error
+}
+
+type BuildFunc func(Dialect, Buffer) error
+
+func (b BuildFunc) Build(d Dialect, buf Buffer) error {
+	return b(d, buf)
+}
 
 type SelectBuilder struct {
 	runner
 	EventReceiver
-	Dialect ql.Dialect
+	Dialect Dialect
 
-	*ql.SelectBuilder
+	*SelectBuilder
 }
 
 func prepareSelect(a []string) []interface{} {
@@ -29,7 +39,7 @@ func (sess *Session) Select(column ...string) *SelectBuilder {
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		SelectBuilder: ql.Select(prepareSelect(column)...),
+		SelectBuilder: Select(prepareSelect(column)...),
 	}
 }
 
@@ -38,7 +48,7 @@ func (tx *Tx) Select(column ...string) *SelectBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		SelectBuilder: ql.Select(prepareSelect(column)...),
+		SelectBuilder: Select(prepareSelect(column)...),
 	}
 }
 
@@ -47,7 +57,7 @@ func (sess *Session) SelectBySql(query string, value ...interface{}) *SelectBuil
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		SelectBuilder: ql.SelectBySQL(query, value...),
+		SelectBuilder: SelectBySQL(query, value...),
 	}
 }
 
@@ -56,12 +66,12 @@ func (tx *Tx) SelectBySql(query string, value ...interface{}) *SelectBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		SelectBuilder: ql.SelectBySQL(query, value...),
+		SelectBuilder: SelectBySQL(query, value...),
 	}
 }
 
 func (b *SelectBuilder) ToSql() (string, []interface{}) {
-	buf := ql.NewBuffer()
+	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
@@ -103,7 +113,7 @@ func (b *SelectBuilder) LoadValues(value interface{}) (int, error) {
 	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
 }
 
-func (b *SelectBuilder) Join(t ql.JoinType, table interface{}, cond ...ql.Condition) *SelectBuilder {
+func (b *SelectBuilder) Join(t JoinType, table interface{}, cond ...Condition) *SelectBuilder {
 	b.Join(t, table, cond...)
 	return b
 }
@@ -140,9 +150,9 @@ func (b *SelectBuilder) Offset(n uint64) *SelectBuilder {
 
 func (b *SelectBuilder) OrderDir(col string, isAsc bool) *SelectBuilder {
 	if isAsc {
-		b.SelectBuilder.OrderBy(col, ql.ASC)
+		b.SelectBuilder.OrderBy(col, ASC)
 	} else {
-		b.SelectBuilder.OrderBy(col, ql.DESC)
+		b.SelectBuilder.OrderBy(col, DESC)
 	}
 	return b
 }
@@ -154,7 +164,7 @@ func (b *SelectBuilder) Paginate(page, perPage uint64) *SelectBuilder {
 }
 
 func (b *SelectBuilder) OrderBy(col string) *SelectBuilder {
-	b.SelectBuilder.Order = append(b.SelectBuilder.Order, ql.Expr(col))
+	b.SelectBuilder.Order = append(b.SelectBuilder.Order, Expr(col))
 	return b
 }
 
@@ -166,11 +176,11 @@ func (b *SelectBuilder) Where(query interface{}, value ...interface{}) *SelectBu
 type InsertBuilder struct {
 	runner
 	EventReceiver
-	Dialect ql.Dialect
+	Dialect Dialect
 
 	RecordID reflect.Value
 
-	*ql.InsertBuilder
+	*InsertBuilder
 }
 
 func (sess *Session) InsertInto(table string) *InsertBuilder {
@@ -178,7 +188,7 @@ func (sess *Session) InsertInto(table string) *InsertBuilder {
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		InsertBuilder: ql.InsertInto(table),
+		InsertBuilder: InsertInto(table),
 	}
 }
 
@@ -187,7 +197,7 @@ func (tx *Tx) InsertInto(table string) *InsertBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		InsertBuilder: ql.InsertInto(table),
+		InsertBuilder: InsertInto(table),
 	}
 }
 
@@ -196,7 +206,7 @@ func (sess *Session) InsertBySql(query string, value ...interface{}) *InsertBuil
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		InsertBuilder: ql.InsertBySQL(query, value...),
+		InsertBuilder: InsertBySQL(query, value...),
 	}
 }
 
@@ -205,12 +215,12 @@ func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		InsertBuilder: ql.InsertBySQL(query, value...),
+		InsertBuilder: InsertBySQL(query, value...),
 	}
 }
 
 func (b *InsertBuilder) ToSql() (string, []interface{}) {
-	buf := ql.NewBuffer()
+	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
@@ -231,7 +241,7 @@ func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
 	return b
 }
 
-func (b *InsertBuilder) Exec() (sql.Result, error) {
+func (b *InsertBuilder) Exec() (sResult, error) {
 	result, err := exec(b.runner, b.EventReceiver, b, b.Dialect)
 	if err != nil {
 		return nil, err
@@ -276,9 +286,9 @@ func (b *InsertBuilder) Values(value ...interface{}) *InsertBuilder {
 type UpdateBuilder struct {
 	runner
 	EventReceiver
-	Dialect ql.Dialect
+	Dialect Dialect
 
-	*ql.UpdateBuilder
+	*UpdateBuilder
 
 	LimitCount int64
 }
@@ -288,7 +298,7 @@ func (sess *Session) Update(table string) *UpdateBuilder {
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		UpdateBuilder: ql.Update(table),
+		UpdateBuilder: Update(table),
 		LimitCount:    -1,
 	}
 }
@@ -298,7 +308,7 @@ func (tx *Tx) Update(table string) *UpdateBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		UpdateBuilder: ql.Update(table),
+		UpdateBuilder: Update(table),
 		LimitCount:    -1,
 	}
 }
@@ -308,7 +318,7 @@ func (sess *Session) UpdateBySql(query string, value ...interface{}) *UpdateBuil
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		UpdateBuilder: ql.UpdateBySQL(query, value...),
+		UpdateBuilder: UpdateBySQL(query, value...),
 		LimitCount:    -1,
 	}
 }
@@ -318,13 +328,13 @@ func (tx *Tx) UpdateBySql(query string, value ...interface{}) *UpdateBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		UpdateBuilder: ql.UpdateBySQL(query, value...),
+		UpdateBuilder: UpdateBySQL(query, value...),
 		LimitCount:    -1,
 	}
 }
 
 func (b *UpdateBuilder) ToSql() (string, []interface{}) {
-	buf := ql.NewBuffer()
+	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
@@ -332,7 +342,7 @@ func (b *UpdateBuilder) ToSql() (string, []interface{}) {
 	return buf.String(), buf.Value()
 }
 
-func (b *UpdateBuilder) Exec() (sql.Result, error) {
+func (b *UpdateBuilder) Exec() (sResult, error) {
 	return exec(b.runner, b.EventReceiver, b, b.Dialect)
 }
 
@@ -356,7 +366,7 @@ func (b *UpdateBuilder) Limit(n uint64) *UpdateBuilder {
 	return b
 }
 
-func (b *UpdateBuilder) Build(d ql.Dialect, buf ql.Buffer) error {
+func (b *UpdateBuilder) Build(d Dialect, buf Buffer) error {
 	err := b.UpdateBuilder.Build(b.Dialect, buf)
 	if err != nil {
 		return err
@@ -371,9 +381,9 @@ func (b *UpdateBuilder) Build(d ql.Dialect, buf ql.Buffer) error {
 type DeleteBuilder struct {
 	runner
 	EventReceiver
-	Dialect ql.Dialect
+	Dialect Dialect
 
-	*ql.DeleteBuilder
+	*DeleteBuilder
 
 	LimitCount int64
 }
@@ -383,7 +393,7 @@ func (sess *Session) DeleteFrom(table string) *DeleteBuilder {
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		DeleteBuilder: ql.DeleteFrom(table),
+		DeleteBuilder: DeleteFrom(table),
 		LimitCount:    -1,
 	}
 }
@@ -393,7 +403,7 @@ func (tx *Tx) DeleteFrom(table string) *DeleteBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		DeleteBuilder: ql.DeleteFrom(table),
+		DeleteBuilder: DeleteFrom(table),
 		LimitCount:    -1,
 	}
 }
@@ -403,7 +413,7 @@ func (sess *Session) DeleteBySql(query string, value ...interface{}) *DeleteBuil
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		DeleteBuilder: ql.DeleteBySQL(query, value...),
+		DeleteBuilder: DeleteBySQL(query, value...),
 		LimitCount:    -1,
 	}
 }
@@ -413,13 +423,13 @@ func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		DeleteBuilder: ql.DeleteBySQL(query, value...),
+		DeleteBuilder: DeleteBySQL(query, value...),
 		LimitCount:    -1,
 	}
 }
 
 func (b *DeleteBuilder) ToSql() (string, []interface{}) {
-	buf := ql.NewBuffer()
+	buf := NewBuffer()
 	err := b.Build(b.Dialect, buf)
 	if err != nil {
 		panic(err)
@@ -441,7 +451,7 @@ func (b *DeleteBuilder) Limit(n uint64) *DeleteBuilder {
 	return b
 }
 
-func (b *DeleteBuilder) Build(d ql.Dialect, buf ql.Buffer) error {
+func (b *DeleteBuilder) Build(d Dialect, buf Buffer) error {
 	err := b.DeleteBuilder.Build(b.Dialect, buf)
 	if err != nil {
 		return err

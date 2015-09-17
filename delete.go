@@ -1,4 +1,4 @@
-package ql
+package dbr
 
 // DeleteBuilder builds `DELETE ...`
 type DeleteBuilder struct {

@@ -1,4 +1,4 @@
-package ql
+package dbr
 
 // XxxBuilders all support raw query
 type raw struct {

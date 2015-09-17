@@ -1,4 +1,4 @@
-package ql
+package dbr
 
 // UpdateBuilder builds `UPDATE ...`
 type UpdateBuilder struct {

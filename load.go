@@ -1,4 +1,4 @@
-package ql
+package dbr
 
 import (
 	"database/sql"

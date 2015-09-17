@@ -1,9 +1,9 @@
-package ql
+package dbr
 
 import (
 	"testing"
 
-	"github.com/gocraft/dbr/ql/dialect"
+	"github.com/gocraft/dbr/dialect"
 	"github.com/stretchr/testify/assert"
 )
 

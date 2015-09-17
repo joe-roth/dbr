@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gocraft/dbr/ql"
-	"github.com/gocraft/dbr/ql/dialect"
+	"github.com/gocraft/dbr/dialect"
 )
 
 // Open instantiates a Connection for a given database/sql connection
@@ -19,7 +18,7 @@ func Open(driver, dsn string, log EventReceiver) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	var d ql.Dialect
+	var d Dialect
 	switch driver {
 	case "mysql":
 		d = dialect.MySQL
@@ -35,7 +34,7 @@ func Open(driver, dsn string, log EventReceiver) (*Connection, error) {
 // to send events, errors, and timings to
 type Connection struct {
 	*sql.DB
-	Dialect ql.Dialect
+	Dialect Dialect
 	EventReceiver
 }
 
@@ -77,9 +76,9 @@ type builder interface {
 	ToSql() (string, []interface{})
 }
 
-func exec(runner runner, log EventReceiver, builder builder, d ql.Dialect) (sql.Result, error) {
+func exec(runner runner, log EventReceiver, builder builder, d Dialect) (sql.Result, error) {
 	query, value := builder.ToSql()
-	query, err := ql.Interpolate(query, value, d)
+	query, err := Interpolate(query, value, d)
 	if err != nil {
 		return nil, log.EventErrKv("dbr.exec.interpolate", err, kvs{
 			"sql":  query,
@@ -103,9 +102,9 @@ func exec(runner runner, log EventReceiver, builder builder, d ql.Dialect) (sql.
 	return result, nil
 }
 
-func query(runner runner, log EventReceiver, builder builder, d ql.Dialect, v interface{}) (int, error) {
+func query(runner runner, log EventReceiver, builder builder, d Dialect, v interface{}) (int, error) {
 	query, value := builder.ToSql()
-	query, err := ql.Interpolate(query, value, d)
+	query, err := Interpolate(query, value, d)
 	if err != nil {
 		return 0, log.EventErrKv("dbr.select.interpolate", err, kvs{
 			"sql":  query,
@@ -126,7 +125,7 @@ func query(runner runner, log EventReceiver, builder builder, d ql.Dialect, v in
 			"sql": query,
 		})
 	}
-	count, err := ql.Load(rows, v)
+	count, err := Load(rows, v)
 	if err != nil {
 		return 0, log.EventErrKv("dbr.select.load.scan", err, kvs{
 			"sql": query,
@@ -135,13 +134,8 @@ func query(runner runner, log EventReceiver, builder builder, d ql.Dialect, v in
 	return count, nil
 }
 
-// Expr
-var (
-	Expr = ql.Expr
-)
-
 // Don't break the API
 // FIXME: This will be removed in the future
 func Interpolate(query string, value []interface{}) (string, error) {
-	return ql.Interpolate(query, value, dialect.MySQL)
+	return Interpolate(query, value, dialect.MySQL)
 }

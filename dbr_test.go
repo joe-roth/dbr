@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gocraft/dbr/ql"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,8 +25,8 @@ func nextID() int64 {
 }
 
 const (
-	mysqlDSN    = "root@unix(/tmp/mysql.sock)/uservoice_development?charset=utf8&parseTime=true"
-	postgresDSN = "postgres://postgres@localhost:5432/uservoice_development?sslmode=disable"
+	mysqlDSN    = "root@unix(/var/run/mysqld/mysqld.sock)/uservoice_development?charset=utf8&parseTime=true"
+	postgresDSN = "postgres://dev:unprotected@localhost:5432/kombucha?sslmode=disable"
 )
 
 func createSession(driver, dsn string) *Session {
@@ -130,7 +129,7 @@ func TestBasicCRUD(t *testing.T) {
 		assert.True(t, jonathan.Id > 0)
 		// select
 		var people []dbrPerson
-		count, err := sess.Select("*").From("dbr_people").Where(ql.Eq("id", jonathan.Id)).LoadStructs(&people)
+		count, err := sess.Select("*").From("dbr_people").Where(Eq("id", jonathan.Id)).LoadStructs(&people)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 		assert.Equal(t, jonathan.Id, people[0].Id)
@@ -148,7 +147,7 @@ func TestBasicCRUD(t *testing.T) {
 		assert.Equal(t, 1, len(ids))
 
 		// update
-		result, err = sess.Update("dbr_people").Where(ql.Eq("id", jonathan.Id)).Set("name", "jonathan1").Exec()
+		result, err = sess.Update("dbr_people").Where(Eq("id", jonathan.Id)).Set("name", "jonathan1").Exec()
 		assert.NoError(t, err)
 
 		rowsAffected, err = result.RowsAffected()
@@ -160,7 +159,7 @@ func TestBasicCRUD(t *testing.T) {
 		assert.EqualValues(t, 1, n.Int64)
 
 		// delete
-		result, err = sess.DeleteFrom("dbr_people").Where(ql.Eq("id", jonathan.Id)).Exec()
+		result, err = sess.DeleteFrom("dbr_people").Where(Eq("id", jonathan.Id)).Exec()
 		assert.NoError(t, err)
 
 		rowsAffected, err = result.RowsAffected()
